@@ -1,0 +1,62 @@
+I need you to build a complete, responsive, single-page website for a civic project called "One Wonder Lake."
+
+Please generate all necessary files (index.html, style.css, script.js, village-data.js) based on the following comprehensive specifications:
+
+### 1. VISUAL DESIGN & THEME
+* **Theme:** Modern, civic, trustworthy.
+* **Color Palette:** Deep Lake Blue (#005f73), Teal Accents (#94d2bd), Dark Cyan (#0a9396), Clean White backgrounds.
+* **Typography:** Clean system sans-serif fonts.
+* **UI Elements:** Buttons should have hover effects. The layout must be fully responsive (mobile-friendly) with a hamburger menu for the navbar on small screens.
+
+### 2. SITE STRUCTURE (index.html)
+Create the following sections in order:
+1.  **Navbar:** Sticky top. Logo: "One Wonder Lake" (left). Links: Mission, Benefits, Address Check, FAQ (right).
+2.  **Hero Section:** Full viewport width, blue background, white text.
+    * Headline: "One Lake. One Community. One Future."
+    * Subhead: "Uniting our neighborhoods for a stronger Wonder Lake."
+    * Button: "Check My Address" (Scrolls to the Address Checker section).
+3.  **Mission Section:** A brief text section titled "The Mission."
+4.  **Benefits Grid:** A 3-column card layout (details below).
+5.  **Address Checker Section:** A distinct section with:
+    * Headline: "Am I Included?"
+    * Input field (placeholder "Enter address...").
+    * Button: "Check Status".
+    * A hidden result container for feedback.
+6.  **FAQ Section:** An accordion or clean list of questions (details below).
+7.  **Vision Section:** A standalone section above the footer (details below).
+8.  **Footer:** Simple copyright text: "Paid for by concerned citizens."
+
+### 3. CONTENT DETAILS
+**Benefits Grid (3 Cards):**
+* **Card 1 (Money/Chart):** "Bringing Our Tax Dollars Home" – Currently, your state income tax dollars stay with the State. By annexing, we capture those 'LGDF' funds for Wonder Lake. This creates a new revenue stream for roads and infrastructure without raising local property tax rates.
+* **Card 2 (House/Shield):** "Local Control & Standards" – Unified code enforcement protects property values and ensures our neighborhoods stay safe and well-maintained. It’s about being good neighbors and preserving the rural, recreational character we love.
+* **Card 3 (Police/Family):** "Safety & Community" – Access to dedicated community policing and the collective budget to finally update playgrounds and create green spaces. A unified Village puts families and safety first.
+
+**FAQ Section:**
+* **Q:** Will I lose my freedom to use my property? -> **A:** No. Code enforcement is about preventing negligence that hurts property values. It ensures our streets and yards reflect the pride we feel for our lake.
+* **Q:** Why do we need Village police? -> **A:** The Sheriff covers the whole county. Village police are dedicated solely to us, providing faster response times and true community policing.
+
+**Vision Section:**
+* **Headline:** "Defining Our Own Future"
+* **Body:** "Wonder Lake is unique. We are not just another suburb; we are a recreational community. By uniting under one Village government, we gain the power to chart our own course, ensuring development is responsible and our rural charm is protected. Annexation is about saying: 'We decide what happens here.'"
+
+### 4. FUNCTIONALITY & LOGIC (script.js + village-data.js)
+The "Address Checker" must function using MOCK DATA for now.
+
+**A. Create 'village-data.js':**
+* Define a variable `const rawVillageData`.
+* Assign it a valid GeoJSON FeatureCollection containing ONE Polygon feature.
+* **Crucial:** Draw the polygon as a simple square box that roughly covers the coordinates of Wonder Lake, IL (approx Lat 42.38, Long -88.35). This serves as our "Mock Village" for testing.
+
+**B. Create 'script.js':**
+* Import `Turf.js` (via CDN in HTML).
+* Create an async function `checkAddress()`.
+* Step 1: Fetch coordinates for the user's input using the OpenStreetMap Nominatim API (`https://nominatim.openstreetmap.org/search?format=json&q={address}`).
+* Step 2: If address found, use `turf.booleanPointInPolygon` to check if the point is inside the mock polygon from `village-data.js`.
+* Step 3: Provide UI Feedback (Change colors/text based on result):
+    * **IF INSIDE:** Green Box. Text: "✅ You are already a Village Resident. Help us spread the word!"
+    * **IF OUTSIDE:** Gold/Yellow Box. Text: "📢 You are in the Annexation Zone. You are currently unincorporated. See your benefits below."
+    * **IF ERROR:** Alert user to try again.
+
+### 5. EXECUTION
+Generate all the code now. Ensure the CSS handles mobile views (padding, font sizes, hamburger menu) gracefully.
