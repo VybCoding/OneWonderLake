@@ -1,0 +1,27 @@
+One Wonder Lake is a civic advocacy website and data-driven political campaign in Wonder Lake, Illinois. It has evolved from a general informational site into a targeted annexation tool backed by geospatial analysis.
+
+What It Is
+This is a single-page informational and advocacy site supporting a municipal annexation initiative. The goal is to unite currently unincorporated neighborhoods—specifically targeting "doughnut hole" islands and edge subdivisions like Deep Spring Woods and Sunrise Ridge—under a single village government.
+
+The Core Message
+The campaign argues that annexation is not just beneficial, but strategically necessary to secure the community's future:
+
+Bring state tax dollars home: Capture LGDF (Local Government Distributive Fund) money that currently stays with the state to fund Wonder Lake infrastructure.
+Establish local control & protect rights: Use Pre-Annexation Agreements to "grandfather" existing rural liberties (sheds, fences) while ensuring unified code enforcement to protect property values.
+Improve safety & services: Replace sporadic County Sheriff coverage with dedicated Village policing and fund local playgrounds.
+The "Inevitability" Argument: For residents in identified "force annexation" zones (<60 acres, wholly surrounded), voluntary annexation allows them to negotiate terms now rather than facing involuntary inclusion later.
+Current Functionality
+The website has moved beyond mockups to live data implementation:
+
+Educates visitors through "Myth-Busting" pillars (Taxes vs. Value, Sheriff vs. Police).
+Checks eligibility with precision: The interactive address checker now uses OpenStreetMap geocoding + Turf.js running against official Village municipal boundary data (GeoJSON).
+It precisely detects users living in unincorporated "doughnut holes" (islands inside the village).
+Identifies "Force Annexation" Candidates: The system has successfully identified 3 specific unincorporated islands (approx. 9 acres, 3 acres, and <1 acre) that meet the statutory requirements for involuntary annexation.
+Strategic Evolution (What We Are Building Next)
+Based on the analysis, the project roadmap has expanded to include:
+
+The "Domino" Strategy: A map feature identifying "key connector" properties that, once annexed, unlock landlocked neighbors for eligibility.
+"Race to 51%" Trackers: Visual progress bars for specific subdivisions (like Sunrise Ridge) to show how close they are to the simple majority needed for annexation.
+Legal Integration: Providing downloadable "Pre-Annexation Agreement" templates to ease resident fears about property rights.
+Direct Outreach: A "Visualizing the Wallet" campaign comparing actual tax bills to combat financial misinformation.
+Actionable Intelligence: Using the generated location descriptions for the "island" properties to begin title searches and formal annexation ordinance planning.
