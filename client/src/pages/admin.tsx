@@ -17,7 +17,8 @@ import {
   FileText,
   AlertCircle,
   Search,
-  X
+  X,
+  Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -96,6 +97,53 @@ export default function AdminPage() {
       window.location.href = "/api/login";
     }
   }, [partiesError, toast]);
+
+  const exportToCSV = () => {
+    if (!interestedParties || interestedParties.length === 0) {
+      toast({
+        title: "No Data",
+        description: "There are no interested parties to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Define CSV headers
+    const headers = ["Name", "Email", "Phone", "Address", "Source", "Date Added", "Notes"];
+
+    // Convert data to CSV rows
+    const rows = interestedParties.map((party) => [
+      `"${party.name.replace(/"/g, '""')}"`,
+      `"${party.email.replace(/"/g, '""')}"`,
+      `"${(party.phone || "").replace(/"/g, '""')}"`,
+      `"${party.address.replace(/"/g, '""')}"`,
+      party.source === "address_checker" ? "Address Checker" : "Tax Estimator",
+      party.createdAt ? format(new Date(party.createdAt), "MMM d, yyyy h:mm a") : "",
+      `"${(party.notes || "").replace(/"/g, '""').replace(/\n/g, " ")}"`,
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.join(",")),
+    ].join("\n");
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `interested_parties_${format(new Date(), "yyyy-MM-dd_HHmmss")}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export Successful",
+      description: `Exported ${interestedParties.length} interested parties to CSV.`,
+    });
+  };
 
   if (authLoading || adminCheckLoading) {
     return (
@@ -258,13 +306,27 @@ export default function AdminPage() {
           <TabsContent value="interested">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  Interested Parties
-                </CardTitle>
-                <CardDescription>
-                  All residents who have expressed interest in voluntary annexation
-                </CardDescription>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="w-5 h-5" />
+                      Interested Parties
+                    </CardTitle>
+                    <CardDescription>
+                      All residents who have expressed interest in voluntary annexation
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    onClick={exportToCSV}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                    data-testid="button-export-csv"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export to CSV
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {partiesLoading ? (
