@@ -21,6 +21,7 @@ The platform features a responsive civic design with a professional governmental
   - Local name variations: "Lakeshore" ↔ "Lake Shore", "Wonder Lake" ↔ "Wonderlake"
   - Multi-attempt search strategy that tries different address formats automatically
   - Geographic bounding box to focus searches on the Wonder Lake area (lat: 42.35-42.45, lon: -88.32 to -88.42)
+  - "Did you mean?" suggestions: When an address is found outside the service area, shows clickable alternatives within Wonder Lake that the user can select
 - **Interactive Map**: Displays official village boundaries (GeoJSON) and address markers.
 - **Property Tax Estimator**: A dedicated page (`/tax-estimator`) that calculates post-annexation taxes based on Equalized Assessed Value (EAV) and current tax bills, providing a detailed breakdown and a lookup guide for McHenry County property data.
 - **Interest Tracking System**: Residents can express interest via forms in the Address Checker and Tax Estimator. Submissions are stored in a PostgreSQL database with source tracking.
