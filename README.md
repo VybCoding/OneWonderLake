@@ -19,6 +19,17 @@ Unite currently unincorporated neighborhoods—specifically "doughnut hole" isla
   - Visual result indicators (green = resident, yellow = annexation zone)
 - **Precise Geospatial Detection**: Uses official municipal boundary polygon (not mock data)
 - **Responsive Civic Design**: Professional governmental aesthetic, mobile-friendly
+- **Comprehensive FAQ (11 Items)**: Myth-busting answers addressing resident concerns:
+  - LGDF funding benefits and multiplier effects
+  - Force annexation legal reality (65 ILCS 5/7-1-13)
+  - Pre-Annexation Agreements for property protection
+  - Property value impacts of annexation
+  - Property rights and code enforcement
+  - Community policing benefits
+  - Tax implications
+  - Local vs. county government control
+  - Status quo risks and urgency
+  - Current resident benefits
 
 ### Identified Data Insights
 - **3 unincorporated doughnut holes** identified meeting force-annexation criteria:
@@ -55,9 +66,10 @@ client/src/
 ├── components/
 │   ├── AddressChecker.tsx      ← Main tool with map integration
 │   ├── WonderLakeMap.tsx       ← Interactive Leaflet map
+│   ├── FAQ.tsx                 ← 11-item persuasive FAQ
 │   ├── Hero.tsx                ← Campaign hero section
 │   ├── BenefitsGrid.tsx        ← Three pillar cards
-│   ├── FAQ.tsx, Mission.tsx, Vision.tsx
+│   ├── Mission.tsx, Vision.tsx
 │   └── Navbar.tsx, Footer.tsx
 ├── data/
 │   ├── village-data.ts         ← Exports official boundary GeoJSON
