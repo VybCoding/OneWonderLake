@@ -14,6 +14,199 @@ import InterestForm from "@/components/InterestForm";
 
 const MAX_DISTANCE_MILES = 2;
 
+// Wonder Lake area bounding box (roughly 2+ miles around the village)
+const WONDER_LAKE_BOUNDS = {
+  minLat: 42.35,
+  maxLat: 42.45,
+  minLon: -88.42,
+  maxLon: -88.32,
+};
+
+// Direction mappings (both ways)
+const DIRECTION_MAPPINGS: Record<string, string> = {
+  'east': 'e',
+  'west': 'w',
+  'north': 'n',
+  'south': 's',
+  'northeast': 'ne',
+  'northwest': 'nw',
+  'southeast': 'se',
+  'southwest': 'sw',
+  'e': 'east',
+  'w': 'west',
+  'n': 'north',
+  's': 'south',
+  'ne': 'northeast',
+  'nw': 'northwest',
+  'se': 'southeast',
+  'sw': 'southwest',
+};
+
+// Street type mappings (both ways)
+const STREET_TYPE_MAPPINGS: Record<string, string> = {
+  'road': 'rd',
+  'street': 'st',
+  'avenue': 'ave',
+  'drive': 'dr',
+  'lane': 'ln',
+  'court': 'ct',
+  'circle': 'cir',
+  'boulevard': 'blvd',
+  'place': 'pl',
+  'terrace': 'ter',
+  'trail': 'trl',
+  'way': 'wy',
+  'parkway': 'pkwy',
+  'rd': 'road',
+  'st': 'street',
+  'ave': 'avenue',
+  'dr': 'drive',
+  'ln': 'lane',
+  'ct': 'court',
+  'cir': 'circle',
+  'blvd': 'boulevard',
+  'pl': 'place',
+  'ter': 'terrace',
+  'trl': 'trail',
+  'wy': 'way',
+  'pkwy': 'parkway',
+};
+
+// Local Wonder Lake area street name variations
+const LOCAL_STREET_VARIATIONS: Record<string, string[]> = {
+  'lake shore': ['lakeshore', 'lake shore'],
+  'lakeshore': ['lake shore', 'lakeshore'],
+  'wonder lake': ['wonderlake', 'wonder lake'],
+  'wonderlake': ['wonder lake', 'wonderlake'],
+};
+
+// Normalize address by swapping directions and street types
+function normalizeAddress(addr: string, useAbbreviations: boolean): string {
+  let normalized = addr.toLowerCase().trim();
+  
+  // Handle directions
+  for (const [key, value] of Object.entries(DIRECTION_MAPPINGS)) {
+    if (useAbbreviations && key.length > 2) {
+      // Replace full words with abbreviations
+      const regex = new RegExp(`\\b${key}\\b`, 'gi');
+      normalized = normalized.replace(regex, value.toUpperCase());
+    } else if (!useAbbreviations && key.length <= 2) {
+      // Replace abbreviations with full words
+      const regex = new RegExp(`\\b${key}\\b`, 'gi');
+      normalized = normalized.replace(regex, value.charAt(0).toUpperCase() + value.slice(1));
+    }
+  }
+  
+  // Handle street types
+  for (const [key, value] of Object.entries(STREET_TYPE_MAPPINGS)) {
+    if (useAbbreviations && key.length > 3) {
+      // Replace full words with abbreviations
+      const regex = new RegExp(`\\b${key}\\b`, 'gi');
+      normalized = normalized.replace(regex, value.charAt(0).toUpperCase() + value.slice(1));
+    } else if (!useAbbreviations && key.length <= 4) {
+      // Replace abbreviations with full words
+      const regex = new RegExp(`\\b${key}\\.?\\b`, 'gi');
+      normalized = normalized.replace(regex, value.charAt(0).toUpperCase() + value.slice(1));
+    }
+  }
+  
+  // Capitalize first letter of each word for proper formatting
+  return normalized.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// Get local street name variations
+function getLocalVariations(addr: string): string[] {
+  const variations: string[] = [];
+  const lowerAddr = addr.toLowerCase();
+  
+  for (const [key, values] of Object.entries(LOCAL_STREET_VARIATIONS)) {
+    if (lowerAddr.includes(key)) {
+      for (const variant of values) {
+        if (variant !== key) {
+          variations.push(addr.replace(new RegExp(key, 'gi'), variant));
+        }
+      }
+    }
+  }
+  
+  return variations;
+}
+
+// Generate multiple address variations to try
+function generateAddressVariations(addr: string): string[] {
+  const variations: string[] = [];
+  const trimmedAddr = addr.trim();
+  
+  // Original address
+  variations.push(trimmedAddr);
+  
+  // With Wonder Lake, IL context
+  if (!trimmedAddr.toLowerCase().includes('wonder lake') && !trimmedAddr.toLowerCase().includes('il')) {
+    variations.push(`${trimmedAddr}, Wonder Lake, IL`);
+  }
+  
+  // With McHenry County context
+  if (!trimmedAddr.toLowerCase().includes('mchenry')) {
+    variations.push(`${trimmedAddr}, McHenry County, IL`);
+  }
+  
+  // Abbreviated version
+  const abbreviated = normalizeAddress(trimmedAddr, true);
+  if (abbreviated !== trimmedAddr) {
+    variations.push(abbreviated);
+    variations.push(`${abbreviated}, Wonder Lake, IL`);
+  }
+  
+  // Expanded version
+  const expanded = normalizeAddress(trimmedAddr, false);
+  if (expanded !== trimmedAddr && expanded !== abbreviated) {
+    variations.push(expanded);
+    variations.push(`${expanded}, Wonder Lake, IL`);
+  }
+  
+  // Local street name variations
+  const localVariations = getLocalVariations(trimmedAddr);
+  for (const variant of localVariations) {
+    variations.push(variant);
+    variations.push(`${variant}, Wonder Lake, IL`);
+  }
+  
+  // Remove duplicates while preserving order
+  return Array.from(new Set(variations));
+}
+
+// Search with Nominatim API using bounding box
+async function searchNominatim(query: string): Promise<any[]> {
+  const { minLat, maxLat, minLon, maxLon } = WONDER_LAKE_BOUNDS;
+  const viewbox = `${minLon},${maxLat},${maxLon},${minLat}`;
+  
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&viewbox=${viewbox}&bounded=0&limit=5`
+  );
+  
+  if (!response.ok) {
+    throw new Error("Failed to fetch address data");
+  }
+  
+  const data = await response.json();
+  
+  // Filter results to prefer those within or near the bounding box
+  if (data && data.length > 0) {
+    const inBoundsResults = data.filter((result: any) => {
+      const lat = parseFloat(result.lat);
+      const lon = parseFloat(result.lon);
+      // Slightly expanded bounds for filtering
+      return lat >= minLat - 0.05 && lat <= maxLat + 0.05 &&
+             lon >= minLon - 0.05 && lon <= maxLon + 0.05;
+    });
+    
+    // Return in-bounds results if available, otherwise return all
+    return inBoundsResults.length > 0 ? inBoundsResults : data;
+  }
+  
+  return data || [];
+}
+
 type ResultStatus = "resident" | "annexation" | "other_municipality" | null;
 
 type SearchResult = "resident" | "annexation" | "other_municipality" | "outside_area" | "not_found";
@@ -63,25 +256,35 @@ export default function AddressChecker() {
     setMarkerPosition(null);
 
     try {
-      // Fetch coordinates from Nominatim API
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch address data");
+      // Generate address variations to try
+      const variations = generateAddressVariations(address);
+      let foundResult: any = null;
+      
+      // Try each variation until we find a result
+      for (const variation of variations) {
+        try {
+          const data = await searchNominatim(variation);
+          if (data && data.length > 0) {
+            foundResult = data[0];
+            break;
+          }
+        } catch (err) {
+          // Continue to next variation
+          console.log(`Variation "${variation}" failed, trying next...`);
+        }
+        
+        // Small delay between requests to be respectful to the API
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      const data = await response.json();
-
-      if (!data || data.length === 0) {
-        setError("Address not found. Please try a different address.");
+      if (!foundResult) {
+        setError("Address not found. Try including 'Wonder Lake, IL' or check the spelling of street names.");
         saveSearchedAddress(address, "not_found");
         setLoading(false);
         return;
       }
 
-      const { lat, lon } = data[0];
+      const { lat, lon } = foundResult;
       const coords: [number, number] = [parseFloat(lat), parseFloat(lon)];
       const userPoint = point([parseFloat(lon), parseFloat(lat)]);
 
