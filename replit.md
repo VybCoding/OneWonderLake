@@ -15,7 +15,12 @@ One Wonder Lake is a data-driven civic advocacy website and political campaign a
 The platform features a responsive civic design with a professional governmental aesthetic, utilizing a deep lake blue theme. UI components are built with Shadcn/ui. The design prioritizes accessibility and a mobile-first approach. The interactive map uses Leaflet with OpenStreetMap tiles, with zoom and drag functionalities locked to prevent interference with page scrolling, enhancing user experience.
 
 ### Technical Implementations
-- **Address Eligibility Checker**: An interactive tool using OpenStreetMap geocoding and Turf.js to classify addresses as Wonder Lake residents, other municipality residents, or eligible for annexation. It checks against 30 neighboring McHenry County municipalities and identifies "doughnut hole" islands. Includes a 2-mile distance filter to prevent lookups for addresses in other counties or states.
+- **Address Eligibility Checker**: An interactive tool using OpenStreetMap geocoding and Turf.js to classify addresses as Wonder Lake residents, other municipality residents, or eligible for annexation. It checks against 30 neighboring McHenry County municipalities and identifies "doughnut hole" islands. Includes a 2-mile distance filter to prevent lookups for addresses in other counties or states. Features intelligent address normalization with:
+  - Direction variations: "East" ↔ "E", "North" ↔ "N", etc.
+  - Street type variations: "Road" ↔ "Rd", "Drive" ↔ "Dr", etc.
+  - Local name variations: "Lakeshore" ↔ "Lake Shore", "Wonder Lake" ↔ "Wonderlake"
+  - Multi-attempt search strategy that tries different address formats automatically
+  - Geographic bounding box to focus searches on the Wonder Lake area (lat: 42.35-42.45, lon: -88.32 to -88.42)
 - **Interactive Map**: Displays official village boundaries (GeoJSON) and address markers.
 - **Property Tax Estimator**: A dedicated page (`/tax-estimator`) that calculates post-annexation taxes based on Equalized Assessed Value (EAV) and current tax bills, providing a detailed breakdown and a lookup guide for McHenry County property data.
 - **Interest Tracking System**: Residents can express interest via forms in the Address Checker and Tax Estimator. Submissions are stored in a PostgreSQL database with source tracking.
