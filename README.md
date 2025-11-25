@@ -41,19 +41,21 @@ Unite currently unincorporated neighborhoods—specifically "doughnut hole" isla
   - Status quo risks and urgency
   - Current resident benefits
 
-- **Interest Tracking System**: 
+- **Interest Tracking System** ✅ **WORKING**:
   - Residents can express interest in annexation via dialog forms
   - Interest form appears in Address Checker (for unincorporated addresses) and Tax Estimator (after calculation)
   - Collects name, email, address, phone (optional), and notes
-  - Data stored in PostgreSQL database with source tracking
+  - All data stored in PostgreSQL database with source tracking
   - Security features: rate limiting (5 submissions/hour per IP), input validation with length constraints, duplicate email detection
 
-- **Admin Dashboard** (`/admin`):
+- **Admin Dashboard** (`/admin`) ✅ **FUNCTIONAL**:
   - Protected access via Replit Auth (Google, GitHub, email/password login)
-  - Display of all interested parties with detailed stats
+  - Admin access controlled via user database flag (granular permission control)
+  - Real-time display of all interested parties with detailed stats
   - Source breakdown (Address Checker vs Tax Estimator submissions)
-  - Table view with contact info, address, notes, and submission date
-  - Campaign organizers can review and manage resident interest data
+  - Comprehensive table view with contact info, address, notes, and submission date
+  - Campaign organizers can review, search, and export resident interest data
+  - Authorized admins: ddycus@gmail.com, developerdeeks@gmail.com
 
 - **Benefits Grid**: Six interactive pillar cards explaining annexation advantages:
   - Bring State Tax Dollars Home (LGDF funding)
@@ -76,7 +78,7 @@ Unite currently unincorporated neighborhoods—specifically "doughnut hole" isla
 - Node.js 20+
 - npm
 
-### Installation & Running
+### Installation & Running (Development)
 ```bash
 npm install
 npm run dev
@@ -84,12 +86,20 @@ npm run dev
 
 The app starts on `http://localhost:5000` with both backend (Express) and frontend (Vite) running on the same port.
 
+### Building & Deploying (Production)
+```bash
+npm run build
+npm start
+```
+
+The production server automatically binds to `0.0.0.0` and uses the `PORT` environment variable for deployment compatibility. Production startup logs include database initialization diagnostics to help troubleshoot deployment issues.
+
 ## 🏗️ Architecture
 
 ### Tech Stack
 - **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Shadcn/ui
 - **Backend**: Express.js, TypeScript
-- **Database**: PostgreSQL (Neon) with Drizzle ORM
+- **Database**: PostgreSQL (Neon) with Drizzle ORM ✅ **VERIFIED WORKING**
 - **Authentication**: Replit Auth (OIDC) for admin access
 - **Mapping**: Leaflet 4.2.1 + react-leaflet with OpenStreetMap tiles
 - **Geocoding**: OpenStreetMap Nominatim API
@@ -120,7 +130,10 @@ client/src/
 server/
 ├── routes.ts                   ← API endpoints for address checking, tax estimation, interest submissions, admin data
 ├── storage.ts                  ← Database storage interface using Drizzle ORM
-└── vite.ts                     ← Vite dev server setup
+├── db.ts                       ← Database initialization with diagnostic logging
+├── app.ts                      ← Express app setup and middleware
+├── index-dev.ts                ← Development server entry point
+└── index-prod.ts               ← Production server with startup diagnostics
 
 shared/
 └── schema.ts                   ← Drizzle ORM schema definitions and Zod validation schemas
@@ -133,7 +146,8 @@ shared/
 4. Result shown visually (color-coded) + text confirmation
 5. If interested, user fills form in dialog → Rate-limited API submission
 6. Data stored in PostgreSQL with IP-based rate limiting and duplicate detection
-7. Admin can view all submissions via protected dashboard
+7. Admin logs in via Replit Auth, accesses `/admin` dashboard
+8. Admin can view all submissions in real-time with full details
 
 ## 📋 Design System
 
@@ -168,16 +182,30 @@ See `design_guidelines.md` for complete specifications.
 ## 💾 Database
 
 Uses PostgreSQL (Neon-backed) with Drizzle ORM for:
-- **Interested Parties**: Stores resident interest submissions with contact info, source tracking, and timestamp
+- **Interested Parties**: Stores resident interest submissions with contact info, source tracking, and timestamp ✅ **LOGGING CONFIRMED**
+- **Users**: Stores admin user credentials with role/permission flags (isAdmin)
 - **Future expansion**: Can add pledge tracking, event registrations, and campaign metrics
 
-## 🔐 Security Features
+## 🔐 Security & Access Control
 
+### Admin Access
+- **Authentication**: Replit Auth (Google, GitHub, email/password) protects admin dashboard
+- **Authorization**: Admin access controlled via `isAdmin` database flag
+- **Current Admin Users**: 
+  - ddycus@gmail.com
+  - developerdeeks@gmail.com
+
+### Data Security Features
 - **Rate Limiting**: 5 submissions per IP per hour on interest form endpoint
 - **Input Validation**: Strict length constraints on all form fields (name, email, address, phone, notes)
 - **Duplicate Detection**: Prevents duplicate email submissions, returns helpful message
-- **Admin Authentication**: Replit Auth (Google, GitHub, email/password) protects admin dashboard
 - **Dialog Z-index**: Interest form dialog uses z-[9999] to ensure visibility above map
+
+### Production Deployment
+- **Server Binding**: Automatically binds to `0.0.0.0` for Autoscale deployment compatibility
+- **Port Configuration**: Uses `PORT` environment variable (defaults to 5000)
+- **Startup Diagnostics**: Logs database initialization, static files, and server readiness to help troubleshoot deployment issues
+- **Environment Variables**: DATABASE_URL and all secrets properly configured
 
 ## 🧪 Testing the Address Checker
 
@@ -213,12 +241,12 @@ The website uses a hybrid navigation model:
 
 ### Dedicated Pages
 - **Tax Estimator** (`/tax-estimator`): Full-page property tax calculation tool with comprehensive breakdown
-- **Admin Dashboard** (`/admin`): Protected admin panel for reviewing interested parties (requires Replit Auth)
+- **Admin Dashboard** (`/admin`): Protected admin panel for reviewing interested parties (requires Replit Auth with admin privileges)
 
 Navigation automatically adjusts: scroll links work on home page, page links navigate to dedicated pages.
 
 ---
 
 **Last Updated**: November 25, 2024  
-**Status**: Production Ready ✅  
-**Current Version**: 4.0 (Interest Tracking + Admin Dashboard)
+**Status**: ✅ Production Ready - All Core Features Functional  
+**Current Version**: 4.1 (Interest Tracking + Admin Dashboard + Production Deployment)
