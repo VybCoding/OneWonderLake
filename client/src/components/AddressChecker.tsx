@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
@@ -132,43 +132,62 @@ function getLocalVariations(addr: string): string[] {
   return variations;
 }
 
-// Generate multiple address variations to try
+// Generate multiple address variations to try - PRIORITIZED ORDER
+// Most specific (Wonder Lake, IL) queries first for faster results
 function generateAddressVariations(addr: string): string[] {
   const variations: string[] = [];
   const trimmedAddr = addr.trim();
+  const lowerAddr = trimmedAddr.toLowerCase();
   
-  // Original address
-  variations.push(trimmedAddr);
+  // Check if address already has location context (more precise check)
+  // Match "wonder lake", "illinois", or standalone "il" (with word boundaries)
+  const hasWonderLake = lowerAddr.includes('wonder lake');
+  const hasIllinois = lowerAddr.includes('illinois');
+  const hasILAbbrev = /\bil\b/.test(lowerAddr) || lowerAddr.endsWith(', il') || lowerAddr.includes(', il ');
+  const hasContext = hasWonderLake || hasIllinois || hasILAbbrev;
   
-  // With Wonder Lake, IL context
-  if (!trimmedAddr.toLowerCase().includes('wonder lake') && !trimmedAddr.toLowerCase().includes('il')) {
+  // PRIORITY 1: Most specific - with Wonder Lake, IL context (most likely to succeed)
+  if (!hasContext) {
     variations.push(`${trimmedAddr}, Wonder Lake, IL`);
   }
   
-  // With McHenry County context
-  if (!trimmedAddr.toLowerCase().includes('mchenry')) {
-    variations.push(`${trimmedAddr}, McHenry County, IL`);
-  }
+  // PRIORITY 2: Original address (in case user included full context)
+  variations.push(trimmedAddr);
   
-  // Abbreviated version
+  // PRIORITY 3: Abbreviated version with Wonder Lake context
   const abbreviated = normalizeAddress(trimmedAddr, true);
-  if (abbreviated !== trimmedAddr) {
-    variations.push(abbreviated);
+  if (abbreviated !== trimmedAddr && !hasContext) {
     variations.push(`${abbreviated}, Wonder Lake, IL`);
   }
   
-  // Expanded version
+  // PRIORITY 4: Expanded version with Wonder Lake context
   const expanded = normalizeAddress(trimmedAddr, false);
-  if (expanded !== trimmedAddr && expanded !== abbreviated) {
-    variations.push(expanded);
+  if (expanded !== trimmedAddr && expanded !== abbreviated && !hasContext) {
     variations.push(`${expanded}, Wonder Lake, IL`);
   }
   
-  // Local street name variations
+  // PRIORITY 5: Local street name variations with Wonder Lake context
   const localVariations = getLocalVariations(trimmedAddr);
   for (const variant of localVariations) {
+    if (!hasContext) {
+      variations.push(`${variant}, Wonder Lake, IL`);
+    }
+  }
+  
+  // LOWER PRIORITY: Fallback variations without specific context
+  if (abbreviated !== trimmedAddr) {
+    variations.push(abbreviated);
+  }
+  if (expanded !== trimmedAddr && expanded !== abbreviated) {
+    variations.push(expanded);
+  }
+  for (const variant of localVariations) {
     variations.push(variant);
-    variations.push(`${variant}, Wonder Lake, IL`);
+  }
+  
+  // LOWEST PRIORITY: McHenry County context
+  if (!trimmedAddr.toLowerCase().includes('mchenry')) {
+    variations.push(`${trimmedAddr}, McHenry County, IL`);
   }
   
   // Remove duplicates while preserving order
@@ -358,6 +377,16 @@ export default function AddressChecker() {
     }
   };
 
+  // Helper to check if a result is within service area
+  const isWithinServiceArea = (lat: string, lon: string): boolean => {
+    const userPoint = point([parseFloat(lon), parseFloat(lat)]);
+    const wonderLakePolygon = rawVillageData.features[0];
+    const boundaryLine = polygonToLine(wonderLakePolygon as any);
+    const nearestPoint = nearestPointOnLine(boundaryLine as any, userPoint);
+    const dist = distance(userPoint, nearestPoint, { units: 'miles' });
+    return dist <= MAX_DISTANCE_MILES;
+  };
+
   const checkAddress = async () => {
     if (!address.trim()) {
       setError("Please enter an address");
@@ -372,19 +401,25 @@ export default function AddressChecker() {
     setSuggestions([]);
 
     try {
-      // Generate address variations to try
+      // Generate address variations to try (prioritized order)
       const variations = generateAddressVariations(address);
-      let foundResult: any = null;
-      let allResults: any[] = [];
+      let validResult: any = null;
+      let outsideAreaResult: any = null;
       
-      // Try each variation until we find a result
+      // Try each variation - EARLY EXIT when we find a valid result in service area
       for (const variation of variations) {
         try {
           const data = await searchNominatim(variation);
           if (data && data.length > 0) {
-            allResults = allResults.concat(data);
-            if (!foundResult) {
-              foundResult = data[0];
+            // Check the first result immediately
+            const result = data[0];
+            if (isWithinServiceArea(result.lat, result.lon)) {
+              // Found a valid result within service area - use it immediately!
+              validResult = result;
+              break; // EARLY EXIT - no need to try more variations
+            } else if (!outsideAreaResult) {
+              // Store first outside-area result as fallback
+              outsideAreaResult = result;
             }
           }
         } catch (err) {
@@ -396,7 +431,14 @@ export default function AddressChecker() {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      if (!foundResult) {
+      // If we found a valid result within service area, process it immediately
+      if (validResult) {
+        await processLocation(validResult.lat, validResult.lon, address);
+        return;
+      }
+
+      // No valid result in service area - check if we have any result at all
+      if (!outsideAreaResult) {
         // No results at all - try to find nearby candidates
         const nearbyCandidates = await collectNearbyCandidates(variations);
         if (nearbyCandidates.length > 0) {
@@ -410,35 +452,16 @@ export default function AddressChecker() {
         return;
       }
 
-      const { lat, lon } = foundResult;
-      const coords: [number, number] = [parseFloat(lat), parseFloat(lon)];
-      const userPoint = point([parseFloat(lon), parseFloat(lat)]);
-
-      // First, check if point is inside Wonder Lake Village
-      const wonderLakePolygon = rawVillageData.features[0];
+      // We have a result but it's outside service area - offer alternatives
+      const nearbyCandidates = await collectNearbyCandidates(variations);
       
-      // Calculate distance from point to Wonder Lake boundary
-      const boundaryLine = polygonToLine(wonderLakePolygon as any);
-      const nearestPoint = nearestPointOnLine(boundaryLine as any, userPoint);
-      const distanceToWonderLake = distance(userPoint, nearestPoint, { units: 'miles' });
-      
-      // If address is outside service area, look for nearby alternatives
-      if (distanceToWonderLake > MAX_DISTANCE_MILES) {
-        // Collect candidates from all results that ARE within the service area
-        const nearbyCandidates = await collectNearbyCandidates(variations);
-        
-        if (nearbyCandidates.length > 0) {
-          setSuggestions(nearbyCandidates);
-          setError("The address found is outside our service area. Did you mean one of these Wonder Lake addresses?");
-        } else {
-          setError(`This address is outside our service area. Please enter an address within ${MAX_DISTANCE_MILES} miles of Wonder Lake.`);
-        }
-        saveSearchedAddress(address, "outside_area", undefined, lat, lon);
-        setLoading(false);
-        return;
+      if (nearbyCandidates.length > 0) {
+        setSuggestions(nearbyCandidates);
+        setError("The address found is outside our service area. Did you mean one of these Wonder Lake addresses?");
+      } else {
+        setError(`This address is outside our service area. Please enter an address within ${MAX_DISTANCE_MILES} miles of Wonder Lake.`);
       }
-      // Address is within service area - process it
-      await processLocation(lat, lon, address);
+      saveSearchedAddress(address, "outside_area", undefined, outsideAreaResult.lat, outsideAreaResult.lon);
     } catch (err) {
       console.error("Error checking address:", err);
       setError("Something went wrong. Please try again.");
@@ -472,7 +495,7 @@ export default function AddressChecker() {
           Enter your address to see if you're part of the annexation zone
         </p>
 
-        <div className="flex gap-3 mb-8">
+        <div className="flex gap-3 mb-4">
           <Input
             type="text"
             placeholder="Enter your Wonder Lake address..."
@@ -489,7 +512,10 @@ export default function AddressChecker() {
             data-testid="button-check-address"
           >
             {loading ? (
-              "Checking..."
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Locating...
+              </>
             ) : (
               <>
                 <Search className="w-5 h-5 mr-2" />
@@ -498,6 +524,18 @@ export default function AddressChecker() {
             )}
           </Button>
         </div>
+
+        {/* Loading indicator with subtle animation */}
+        {loading && (
+          <div className="mb-8 p-4 bg-primary/5 border border-primary/20 rounded-md flex items-center justify-center gap-3" data-testid="loading-indicator">
+            <div className="flex gap-1">
+              <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+              <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+              <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+            </div>
+            <span className="text-muted-foreground">Locating your address...</span>
+          </div>
+        )}
 
         {/* Did you mean? Suggestions - Dropdown below text box */}
         {suggestions.length > 0 && (
