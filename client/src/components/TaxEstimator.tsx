@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Calculator, TrendingUp, DollarSign, AlertCircle, ChevronDown, ChevronUp, Info, ExternalLink, HelpCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Calculator, TrendingUp, DollarSign, AlertCircle, ChevronDown, ChevronUp, Info, ExternalLink, HelpCircle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -34,10 +34,21 @@ interface VillageTaxInfo {
   notes: string[];
 }
 
-export default function TaxEstimator() {
-  const [eav, setEav] = useState("");
-  const [currentTax, setCurrentTax] = useState("");
+interface TaxEstimatorProps {
+  initialEav?: string;
+  initialTax?: string;
+}
+
+export default function TaxEstimator({ initialEav = "", initialTax = "" }: TaxEstimatorProps) {
+  const [eav, setEav] = useState(initialEav);
+  const [currentTax, setCurrentTax] = useState(initialTax);
   const [showDetails, setShowDetails] = useState(false);
+  const [showLookupGuide, setShowLookupGuide] = useState(true);
+
+  useEffect(() => {
+    if (initialEav) setEav(initialEav);
+    if (initialTax) setCurrentTax(initialTax);
+  }, [initialEav, initialTax]);
 
   const { data: villageTaxInfo } = useQuery<VillageTaxInfo>({
     queryKey: ["/api/village-tax-info"]
@@ -365,31 +376,113 @@ export default function TaxEstimator() {
           </div>
         )}
 
-        {!estimateMutation.data && !estimateMutation.isPending && (
-          <div className="mt-8 p-6 rounded-lg border bg-muted/30">
-            <h3 className="font-semibold mb-3 flex items-center gap-2">
-              <Info className="w-5 h-5" />
-              How to Find Your Property Tax Information
-            </h3>
-            <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
-              <li>
-                Visit the{" "}
-                <a 
-                  href={villageTaxInfo?.mchenryCountyPortalUrl || "https://mchenryil.devnetwedge.com/search"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                  data-testid="link-county-portal-instructions"
+        {!estimateMutation.data && !estimateMutation.isPending && showLookupGuide && (
+          <Card className="mt-8" data-testid="card-lookup-guide">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <FileText className="w-5 h-5" />
+                  Step-by-Step: Find Your Tax Information
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowLookupGuide(false)}
+                  className="text-muted-foreground"
+                  data-testid="button-hide-guide"
                 >
-                  McHenry County Property Tax Inquiry
-                </a>
-              </li>
-              <li>Search by your address, PIN, or owner name</li>
-              <li>Click on your property to view the tax bill</li>
-              <li>Find "Net Taxable Value" or "EAV" and your "Total Tax" amount</li>
-              <li>Enter those values above to see your estimate</li>
-            </ol>
-          </div>
+                  Hide
+                </Button>
+              </div>
+              <CardDescription>
+                Get your EAV and current taxes from McHenry County in about 2 minutes
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                    1
+                  </div>
+                  <div>
+                    <p className="font-medium">Open the McHenry County Portal</p>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Click the button below to open a new tab
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                    >
+                      <a 
+                        href={villageTaxInfo?.mchenryCountyPortalUrl || "https://mchenryil.devnetwedge.com/search"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-testid="link-county-portal-step1"
+                      >
+                        Open County Portal
+                        <ExternalLink className="w-3 h-3 ml-1" />
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                    2
+                  </div>
+                  <div>
+                    <p className="font-medium">Search for Your Property</p>
+                    <p className="text-sm text-muted-foreground">
+                      Enter your street address or Property Index Number (PIN). Example: "1234 Lakeview Dr"
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                    3
+                  </div>
+                  <div>
+                    <p className="font-medium">Click on Your Property</p>
+                    <p className="text-sm text-muted-foreground">
+                      Select your property from the search results to view details
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                    4
+                  </div>
+                  <div>
+                    <p className="font-medium">Find Your Tax Values</p>
+                    <p className="text-sm text-muted-foreground">
+                      Look for <strong>"Net Taxable Value"</strong> (your EAV) and <strong>"Total Tax"</strong> on the property details or tax bill PDF
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                    5
+                  </div>
+                  <div>
+                    <p className="font-medium">Enter Values Above</p>
+                    <p className="text-sm text-muted-foreground">
+                      Come back to this page and enter both numbers in the form above, then click Calculate
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 p-3 rounded-lg bg-accent/30 text-sm text-muted-foreground">
+                <Info className="w-4 h-4 inline-block mr-1 text-primary" />
+                <strong>Why manual entry?</strong> McHenry County's tax portal requires you to access your own records directly 
+                for privacy and security reasons. We cannot automatically retrieve your tax data.
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </section>
