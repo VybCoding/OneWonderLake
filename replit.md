@@ -28,6 +28,7 @@ For residents in identified "force annexation" zones (<60 acres, wholly surround
 - ✅ **Precise Boundary Detection**: Uses official Village municipal boundary GeoJSON data
 - ✅ **Doughnut Hole Detection**: Successfully identifies unincorporated islands wholly surrounded by the village
 - ✅ **Responsive Civic Design**: Professional governmental aesthetic with deep lake blue theme
+- ✅ **Property Tax Estimator**: Calculate post-annexation taxes using Village levy rate ($0.2847 per $100 EAV) with step-by-step guide to McHenry County portal
 
 ### Technology Stack
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS
@@ -69,14 +70,17 @@ Based on geospatial analysis, the system has identified:
 ### Key Files
 - `client/src/components/AddressChecker.tsx`: Main address checking interface with map integration
 - `client/src/components/WonderLakeMap.tsx`: Leaflet map component displaying boundary and markers
+- `client/src/components/TaxEstimator.tsx`: Property tax estimator with manual input and step-by-step guide
 - `client/src/data/village-data.ts`: Exports official village boundary GeoJSON
 - `client/src/data/wonder-lake-boundary.geojson`: Official municipal boundary data
+- `server/routes.ts`: Backend API routes including `/api/tax/estimate` and `/api/village-tax-info`
 - `design_guidelines.md`: Complete design system and brand guidelines
 
 ### Page Components
 - `Hero.tsx`: Campaign tagline and primary CTA
 - `Mission.tsx`: Core messaging about annexation benefits
 - `BenefitsGrid.tsx`: Three-pillar benefit cards (Tax, Control, Safety)
+- `TaxEstimator.tsx`: Post-annexation property tax calculator
 - `FAQ.tsx`: Myth-busting accordion for common concerns
 - `Vision.tsx`: Community future messaging
 - `Footer.tsx`: Basic footer with attribution
@@ -126,6 +130,7 @@ Currently using in-memory storage (MemStorage) for any data persistence needs. C
 - Demonstrate successful civic tech + grassroots organizing model for other communities
 
 ## Recent Changes
+- **2024-11-25**: Added Property Tax Estimator with Village of Wonder Lake levy rate ($0.2847 per $100 EAV), step-by-step McHenry County portal guide, and detailed calculation breakdown
 - **2024-11-25**: Expanded FAQ section from 4 to 11 items with persuasive content addressing LGDF funding, force annexation reality, Pre-Annexation Agreements, property values, and common resident concerns
 - **2024-11-25**: Integrated Leaflet mapping with official GeoJSON boundary data
 - **2024-11-25**: Replaced mock rectangular boundary with actual municipal boundary polygon
