@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DollarSign, Vote, Compass, ShieldCheck, Users, X } from "lucide-react";
+import { DollarSign, Vote, Compass, ShieldCheck, Users, Navigation } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Dialog,
@@ -124,6 +124,28 @@ const benefits: Benefit[] = [
         "Collective budget for playground updates and park maintenance",
         "Coordinated planning for trails, green spaces, and recreational facilities",
         "Community events and programs that bring neighbors together",
+      ],
+    },
+  },
+  {
+    icon: Navigation,
+    title: "Recreational Freedoms (Golf Cart Ordinance)",
+    shortDescription:
+      "Enjoy the Village's golf cart ordinance that permits registered golf carts to operate within designated areas, enhancing neighborhood recreation and community character.",
+    fullContent: {
+      headline: "A Village That Celebrates Recreation and Lifestyle",
+      paragraphs: [
+        "One of the things that makes Wonder Lake special is our commitment to maintaining a recreational, family-friendly community. The Village has established an ordinance that permits golf cart usage within Village limits—a policy that reflects our values around leisure, neighborhood mobility, and quality of life.",
+        "This golf cart ordinance allows registered owners to use their carts for local transportation and recreation throughout designated areas of the Village. It's a way to enjoy our community at a slower pace, connect with neighbors, and maintain the relaxed, recreational character that makes Wonder Lake unique.",
+        "When you join the Village, you become part of a community that values these kinds of lifestyle freedoms. Rather than restrictive County rules, Wonder Lake's ordinances are written by and for our neighbors—people who understand what makes this community special and want to preserve it.",
+      ],
+      keyPoints: [
+        "Registered golf carts permitted to operate within Village limits",
+        "Use for local recreation and neighborhood transportation",
+        "Policy reflects community values around leisure and lifestyle",
+        "Written by Village government that understands local priorities",
+        "Maintained through Village ordinance (not County oversight)",
+        "Part of Wonder Lake's identity as a recreational family community",
       ],
     },
   },
