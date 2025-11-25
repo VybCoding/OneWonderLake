@@ -5,12 +5,17 @@ export default function Mission() {
         <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground" data-testid="text-mission-title">
           The Mission
         </h2>
-        <p className="text-lg md:text-xl text-muted-foreground leading-relaxed" data-testid="text-mission-body">
-          One Wonder Lake is a grassroots effort to unite our community under a single village government. 
-          By annexing the unincorporated areas surrounding our lake, we can bring state tax dollars home, 
-          establish consistent community standards, and invest in the infrastructure and services that make 
-          Wonder Lake a great place to live for generations to come.
-        </p>
+        <div className="space-y-4 text-lg md:text-xl text-muted-foreground leading-relaxed" data-testid="text-mission-body">
+          <p>
+            Empower the Wonder Lake community to define its own future. One Wonder Lake seeks to unite our fragmented neighborhoods into a single, strong Village that commands its fair share of state funding and local authority.
+          </p>
+          <p>
+            We advocate for mass annexation not just to grow, but to protect what matters: our rural character, our property values, and our shared identity. We exist to ensure that every resident gains a vote in their local government, a voice in our standards, and a stake in preserving Wonder Lake as a thriving, premier rural Village.
+          </p>
+          <p>
+            By standing together, we secure the resources needed for community policing, vibrant green spaces, and a safe, family-oriented recreational haven for generations to come.
+          </p>
+        </div>
       </div>
     </section>
   );
