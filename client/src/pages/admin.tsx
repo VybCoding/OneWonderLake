@@ -145,6 +145,54 @@ export default function AdminPage() {
     });
   };
 
+  const exportAddressSearchesToCSV = () => {
+    if (!searchedAddresses || searchedAddresses.length === 0) {
+      toast({
+        title: "No Data",
+        description: "There are no address searches to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Define CSV headers
+    const headers = ["Address", "Result", "Municipality", "Date"];
+
+    // Convert data to CSV rows
+    const rows = searchedAddresses.map((search) => [
+      `"${search.address.replace(/"/g, '""')}"`,
+      search.result === "resident" ? "Village Resident" :
+      search.result === "annexation" ? "Annexation Zone" :
+      search.result === "other_municipality" ? "Other Municipality" :
+      search.result === "outside_area" ? "Outside Area" :
+      "Not Found",
+      `"${(search.municipalityName || "").replace(/"/g, '""')}"`,
+      search.createdAt ? format(new Date(search.createdAt), "MMM d, yyyy h:mm a") : "",
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.join(",")),
+    ].join("\n");
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `address_searches_${format(new Date(), "yyyy-MM-dd_HHmmss")}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export Successful",
+      description: `Exported ${searchedAddresses.length} address searches to CSV.`,
+    });
+  };
+
   if (authLoading || adminCheckLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -433,13 +481,27 @@ export default function AdminPage() {
           <TabsContent value="searches">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Search className="w-5 h-5" />
-                  Address Searches
-                </CardTitle>
-                <CardDescription>
-                  All addresses that have been looked up in the Address Checker
-                </CardDescription>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <CardTitle className="flex items-center gap-2">
+                      <Search className="w-5 h-5" />
+                      Address Searches
+                    </CardTitle>
+                    <CardDescription>
+                      All addresses that have been looked up in the Address Checker
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    onClick={exportAddressSearchesToCSV}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                    data-testid="button-export-searches-csv"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export to CSV
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {addressesLoading ? (
