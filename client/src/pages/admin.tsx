@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { format } from "date-fns";
 import { 
   Users, 
@@ -33,8 +33,8 @@ import type { InterestedParty } from "@shared/schema";
 export default function AdminPage() {
   const { toast } = useToast();
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       toast({
@@ -42,9 +42,7 @@ export default function AdminPage() {
         description: "Please log in to access the admin panel.",
         variant: "destructive",
       });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
+      window.location.href = "/api/login";
     }
   }, [isAuthenticated, authLoading, toast]);
 
@@ -66,7 +64,6 @@ export default function AdminPage() {
     retry: false,
   });
 
-  // Handle unauthorized errors
   useEffect(() => {
     if (partiesError && isUnauthorizedError(partiesError as Error)) {
       toast({
@@ -74,9 +71,7 @@ export default function AdminPage() {
         description: "Please log in again.",
         variant: "destructive",
       });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
+      window.location.href = "/api/login";
     }
   }, [partiesError, toast]);
 

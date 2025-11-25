@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -50,7 +50,7 @@ export default function InterestForm({
   buttonClassName = "",
 }: InterestFormProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "duplicate">("idle");
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "duplicate" | "ratelimit" | "error">("idle");
 
   const form = useForm<InterestFormValues>({
     resolver: zodResolver(interestFormSchema),
@@ -63,10 +63,11 @@ export default function InterestForm({
     },
   });
 
-  // Update address when prefillAddress changes
-  if (prefillAddress && form.getValues("address") !== prefillAddress) {
-    form.setValue("address", prefillAddress);
-  }
+  useEffect(() => {
+    if (prefillAddress && form.getValues("address") !== prefillAddress) {
+      form.setValue("address", prefillAddress);
+    }
+  }, [prefillAddress, form]);
 
   const mutation = useMutation({
     mutationFn: async (data: InterestFormValues) => {
@@ -83,6 +84,10 @@ export default function InterestForm({
     onError: (error: any) => {
       if (error.message?.includes("409")) {
         setSubmitStatus("duplicate");
+      } else if (error.message?.includes("429")) {
+        setSubmitStatus("ratelimit");
+      } else {
+        setSubmitStatus("error");
       }
     },
   });
@@ -142,6 +147,28 @@ export default function InterestForm({
                 Close
               </Button>
             </div>
+          ) : submitStatus === "ratelimit" ? (
+            <div className="py-6 text-center">
+              <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">Too Many Requests</h3>
+              <p className="text-muted-foreground mb-4">
+                For security purposes, we limit submissions. Please try again in an hour.
+              </p>
+              <Button onClick={handleClose} data-testid="button-close-ratelimit">
+                Close
+              </Button>
+            </div>
+          ) : submitStatus === "error" ? (
+            <div className="py-6 text-center">
+              <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">Something Went Wrong</h3>
+              <p className="text-muted-foreground mb-4">
+                We couldn't process your request. Please try again later.
+              </p>
+              <Button onClick={() => setSubmitStatus("idle")} data-testid="button-try-again">
+                Try Again
+              </Button>
+            </div>
           ) : (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -188,7 +215,7 @@ export default function InterestForm({
                         <Input 
                           placeholder="123 Main St, Wonder Lake, IL" 
                           {...field} 
-                          data-testid="input-address" 
+                          data-testid="input-interest-address" 
                         />
                       </FormControl>
                       <FormMessage />

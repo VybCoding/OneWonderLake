@@ -4,6 +4,34 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertInterestedPartySchema } from "@shared/schema";
 
+const submissionCounts = new Map<string, { count: number; firstSubmission: number }>();
+const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
+const MAX_SUBMISSIONS_PER_HOUR = 5;
+
+function getRateLimitKey(req: Request): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  const ip = typeof forwarded === 'string' ? forwarded.split(',')[0] : req.ip || 'unknown';
+  return ip;
+}
+
+function checkRateLimit(req: Request): boolean {
+  const key = getRateLimitKey(req);
+  const now = Date.now();
+  const record = submissionCounts.get(key);
+  
+  if (!record || now - record.firstSubmission > RATE_LIMIT_WINDOW) {
+    submissionCounts.set(key, { count: 1, firstSubmission: now });
+    return true;
+  }
+  
+  if (record.count >= MAX_SUBMISSIONS_PER_HOUR) {
+    return false;
+  }
+  
+  record.count++;
+  return true;
+}
+
 interface TaxEstimate {
   currentTax: number;
   estimatedPostAnnexationTax: number;
@@ -95,6 +123,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Interested parties routes (public submission)
   app.post("/api/interested", async (req: Request, res: Response) => {
     try {
+      if (!checkRateLimit(req)) {
+        return res.status(429).json({ 
+          error: "Too many submissions. Please try again later.",
+          message: "For security purposes, we limit submissions to 5 per hour." 
+        });
+      }
+
       const validationResult = insertInterestedPartySchema.safeParse(req.body);
       
       if (!validationResult.success) {

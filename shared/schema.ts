@@ -48,6 +48,16 @@ export const insertInterestedPartySchema = createInsertSchema(interestedParties)
   id: true,
   emailSent: true,
   createdAt: true,
+}).extend({
+  name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
+  email: z.string().email("Please enter a valid email address").max(255, "Email is too long"),
+  address: z.string().min(5, "Please enter your full address").max(500, "Address is too long"),
+  phone: z.string().max(20, "Phone number is too long").optional().or(z.literal("")),
+  notes: z.string().max(1000, "Notes are too long").optional().or(z.literal("")),
+  source: z.enum(["address_checker", "tax_estimator"], { 
+    required_error: "Source is required",
+    invalid_type_error: "Invalid source" 
+  }),
 });
 
 export type InsertInterestedParty = z.infer<typeof insertInterestedPartySchema>;
