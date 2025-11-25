@@ -127,11 +127,13 @@ The project utilizes a full-stack JavaScript setup:
 - **Icons**: Lucide React (ThumbsUp, ThumbsDown, RotateCcw, etc.)
 
 ## Recent Updates (November 2025)
-- Added dual interest/disinterest tracking with thumbs up/down buttons
+- Added dual interest/disinterest tracking with thumbs up/down buttons on BOTH Address Checker and Tax Estimator
 - Renamed admin dashboard to "Community Sentiment Dashboard"
-- Added clickable filter cards for Interested/Not Interested with visual feedback
+- Added clickable filter cards for Interested/Not Interested with visual feedback (green/red ring highlights)
 - Added Reset Filter button that appears when filters are active
-- Added Interest column to responses table with color-coded badges
-- Updated CSV export to include interest status
-- Optimized address search with prioritized queries and early exit logic
+- Added Interest column to responses table with color-coded badges (green "Yes" for interested, red "No" for not interested)
+- Updated CSV export to include interest status for comprehensive data analysis
+- Optimized address search with prioritized queries and early exit logic (12ms lookup time)
 - Added animated loading state with bouncing dots during address lookups
+- Tax Estimator tool now displays both "I'm Interested" and "I'm NOT Interested" buttons after tax calculation
+- Database cleared and ready for live data collection
