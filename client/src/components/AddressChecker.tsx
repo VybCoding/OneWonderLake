@@ -499,25 +499,10 @@ export default function AddressChecker() {
           </Button>
         </div>
 
-        {/* Interactive Map */}
-        <div className="mb-8">
-          <WonderLakeMap 
-            markerPosition={markerPosition} 
-            result={result}
-            municipalityName={municipalityName}
-          />
-        </div>
-
-        {error && (
-          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-center" data-testid="text-error">
-            {error}
-          </div>
-        )}
-
-        {/* Did you mean? Suggestions */}
+        {/* Did you mean? Suggestions - Dropdown below text box */}
         {suggestions.length > 0 && (
-          <div className="mt-4 p-4 bg-card border border-border rounded-md" data-testid="suggestions-container">
-            <p className="text-sm font-medium text-muted-foreground mb-3">Select an address:</p>
+          <div className="mb-8 p-4 bg-card border border-border rounded-md" data-testid="suggestions-container">
+            <p className="text-sm font-medium text-muted-foreground mb-3">Did you mean?</p>
             <div className="space-y-2">
               {suggestions.map((suggestion, index) => {
                 // Format display: show street address prominently, then city/state smaller
@@ -542,6 +527,21 @@ export default function AddressChecker() {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* Interactive Map */}
+        <div className="mb-8">
+          <WonderLakeMap 
+            markerPosition={markerPosition} 
+            result={result}
+            municipalityName={municipalityName}
+          />
+        </div>
+
+        {error && (
+          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-center" data-testid="text-error">
+            {error}
           </div>
         )}
 
