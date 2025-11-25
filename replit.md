@@ -126,6 +126,7 @@ Currently using in-memory storage (MemStorage) for any data persistence needs. C
 - Demonstrate successful civic tech + grassroots organizing model for other communities
 
 ## Recent Changes
+- **2024-11-25**: Expanded FAQ section from 4 to 11 items with persuasive content addressing LGDF funding, force annexation reality, Pre-Annexation Agreements, property values, and common resident concerns
 - **2024-11-25**: Integrated Leaflet mapping with official GeoJSON boundary data
 - **2024-11-25**: Replaced mock rectangular boundary with actual municipal boundary polygon
 - **2024-11-25**: Added interactive map showing real-time address checking with visual markers
