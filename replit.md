@@ -6,7 +6,7 @@ One Wonder Lake is a data-driven civic advocacy website and political campaign f
 ## Core Mission
 Unite currently unincorporated neighborhoods—specifically "doughnut hole" islands and edge subdivisions like Deep Spring Woods and Sunrise Ridge—under a single Wonder Lake village government.
 
-## Key Campaign Arguments (5 Pillars)
+## Key Campaign Arguments (6 Pillars)
 
 The campaign argues that annexation is not just beneficial, but strategically necessary to secure the community's future. Each pillar is presented as a clickable card on the homepage with in-depth content in a dialog.
 
@@ -24,6 +24,9 @@ Use Pre-Annexation Agreements to "grandfather" existing rural liberties (sheds, 
 
 ### 5. Improve Safety & Services
 Replace sporadic County Sheriff coverage with dedicated Village policing and fund local amenities like playgrounds and green spaces.
+
+### 6. Golf Cart Freedom
+Highlights Wonder Lake's existing golf cart ordinance that allows registration and street usage - a benefit available to Village residents that demonstrates local control advantages.
 
 ### Supporting Argument: The "Inevitability" Factor
 For residents in identified "force annexation" zones (<60 acres, wholly surrounded), voluntary annexation allows them to negotiate terms now rather than facing involuntary inclusion later.
@@ -44,6 +47,16 @@ For residents in identified "force annexation" zones (<60 acres, wholly surround
   - Step-by-step McHenry County portal lookup guide
   - Detailed breakdown showing Village levy amount, percentage increase, and monthly impact
   - Located on dedicated `/tax-estimator` page to avoid homepage information overflow
+- ✅ **Interest Tracking System**: Residents can express interest in annexation
+  - Interest form appears in AddressChecker (for unincorporated addresses) and TaxEstimator (after calculation)
+  - Collects name, email, address, phone (optional), and notes
+  - Stores submissions in PostgreSQL database with source tracking
+  - Email confirmation feature planned (Resend integration noted for future setup)
+- ✅ **Admin Dashboard** (/admin): Protected admin panel for campaign organizers
+  - Requires Replit Auth login (supports Google, GitHub, email/password)
+  - Displays all interested parties with stats cards
+  - Shows source breakdown (Address Checker vs Tax Estimator)
+  - Table view with contact info, address, notes, and submission date
 
 ### Technology Stack
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS
@@ -52,6 +65,8 @@ For residents in identified "force annexation" zones (<60 acres, wholly surround
 - **Geocoding**: OpenStreetMap Nominatim API
 - **Geospatial Analysis**: Turf.js for point-in-polygon calculations
 - **Data**: Official GeoJSON municipal boundary data
+- **Database**: PostgreSQL (Neon) via Drizzle ORM
+- **Authentication**: Replit Auth (OIDC) for admin access
 
 ### Data Analysis Findings
 Based on geospatial analysis, the system has identified:
@@ -83,23 +98,27 @@ Based on geospatial analysis, the system has identified:
 ## File Structure
 
 ### Key Files
-- `client/src/components/AddressChecker.tsx`: Main address checking interface with map integration
+- `client/src/components/AddressChecker.tsx`: Main address checking interface with map integration + interest form
 - `client/src/components/WonderLakeMap.tsx`: Leaflet map component with locked zoom level (no scroll, double-click, touch, or drag)
-- `client/src/components/TaxEstimator.tsx`: Property tax estimator component with manual input and step-by-step guide
+- `client/src/components/TaxEstimator.tsx`: Property tax estimator component with manual input, step-by-step guide, and interest form
+- `client/src/components/InterestForm.tsx`: Reusable dialog form for expressing interest in annexation
 - `client/src/components/Navbar.tsx`: Navigation bar with scroll-to-section links and page routing
 - `client/src/data/village-data.ts`: Exports official village boundary GeoJSON
 - `client/src/data/wonder-lake-boundary.geojson`: Official municipal boundary data
-- `server/routes.ts`: Backend API routes including `/api/tax/estimate` and `/api/village-tax-info`
+- `server/routes.ts`: Backend API routes including `/api/tax/estimate`, `/api/village-tax-info`, `/api/interest`, and `/api/admin/*`
+- `server/storage.ts`: Database storage interface using Drizzle ORM for interested parties
+- `shared/schema.ts`: Database schema definitions (interested_addresses table)
 - `design_guidelines.md`: Complete design system and brand guidelines
 
 ### Pages
 - `client/src/pages/home.tsx`: Main landing page with Hero, Mission, Benefits, Address Checker, FAQ, Vision sections
 - `client/src/pages/tax-estimator.tsx`: Dedicated tax calculator page
+- `client/src/pages/admin.tsx`: Protected admin dashboard for viewing interested parties
 
 ### Page Components
 - `Hero.tsx`: Campaign tagline and primary CTA
 - `Mission.tsx`: Core messaging about annexation benefits
-- `BenefitsGrid.tsx`: Five-pillar benefit cards with click-to-expand dialogs containing in-depth content (Tax, Representation, Self-Determination, Local Control, Safety)
+- `BenefitsGrid.tsx`: Six-pillar benefit cards with click-to-expand dialogs containing in-depth content (Tax, Representation, Self-Determination, Local Control, Safety, Golf Cart)
 - `FAQ.tsx`: Myth-busting accordion for common concerns
 - `Vision.tsx`: Community future messaging
 - `Footer.tsx`: Basic footer with attribution
@@ -114,7 +133,9 @@ npm run dev
 This starts both Express backend (for future API needs) and Vite frontend on the same port.
 
 ### Storage Strategy
-Currently using in-memory storage (MemStorage) for any data persistence needs. Can be upgraded to PostgreSQL database if campaign tracking features are added.
+Using PostgreSQL database (Neon-backed) with Drizzle ORM for all data persistence needs. Database includes:
+- `interested_addresses` table: Stores resident interest submissions with contact info and source tracking
+- Future tables can be added via Drizzle schema in `shared/schema.ts`
 
 ### Design System
 - **Primary Color**: Deep Lake Blue (#005f73) - Primary buttons, navbar
@@ -158,6 +179,15 @@ Currently using in-memory storage (MemStorage) for any data persistence needs. C
 - Demonstrate successful civic tech + grassroots organizing model for other communities
 
 ## Recent Changes
+- **2024-11-25 (v4)**: Added Interest Tracking System + Admin Dashboard
+  - Created InterestForm component for expressing interest in annexation
+  - Added interest form to AddressChecker (shows when address is in annexation zone)
+  - Added interest form to TaxEstimator (shows after calculation completes)
+  - Created protected admin dashboard at `/admin` using Replit Auth
+  - Admin panel shows stats cards and table view of all interested parties
+  - Added "Golf Cart Freedom" as 6th pillar in BenefitsGrid
+  - Migrated from in-memory storage to PostgreSQL database with Drizzle ORM
+  - Email confirmation via Resend noted for future setup
 - **2024-11-25 (v3)**: Expanded Benefits section from 3 to 5 pillars with click-to-expand dialogs
   - Added: "Gain a Voice (Representation)" pillar about voting rights
   - Added: "Define Our Future (Self-Determination)" pillar about local vs County control
