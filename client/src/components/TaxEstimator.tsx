@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Calculator, TrendingUp, DollarSign, AlertCircle, ChevronDown, ChevronUp, Info, ExternalLink, HelpCircle, FileText } from "lucide-react";
+import { Calculator, TrendingUp, DollarSign, AlertCircle, ChevronDown, ChevronUp, Info, ExternalLink, HelpCircle, FileText, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -362,10 +362,20 @@ export default function TaxEstimator({ initialEav = "", initialTax = "" }: TaxEs
             </div>
 
             <div className="text-center space-y-4">
-              <InterestForm 
-                source="tax_estimator"
-                buttonSize="lg"
-              />
+              <div className="flex gap-3 justify-center flex-wrap" data-testid="interest-buttons-container">
+                <InterestForm 
+                  source="tax_estimator"
+                  interested={true}
+                  buttonSize="lg"
+                  buttonClassName="bg-green-600 hover:bg-green-700 text-white"
+                />
+                <InterestForm 
+                  source="tax_estimator"
+                  interested={false}
+                  buttonSize="lg"
+                  buttonClassName="bg-gray-600 hover:bg-gray-700 text-white"
+                />
+              </div>
               <div>
                 <Button
                   variant="outline"
