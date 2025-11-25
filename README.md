@@ -1,0 +1,129 @@
+# One Wonder Lake - Civic Advocacy & Annexation Campaign
+
+A data-driven civic advocacy website powered by interactive geospatial analysis and mapping technology.
+
+## 🎯 Mission
+
+Unite currently unincorporated neighborhoods—specifically "doughnut hole" islands and edge subdivisions—under a single Wonder Lake village government to:
+- **Bring tax dollars home** (capture LGDF state funds)
+- **Establish local control** (unified code enforcement, property rights protection)
+- **Improve safety & services** (dedicated policing, community amenities)
+
+## ✅ Current Status
+
+### Completed Features
+- **Address Eligibility Checker**: Users enter their address to see if they're inside or outside village boundaries
+- **Interactive Map**: Real-time Leaflet + OpenStreetMap display showing:
+  - Official village boundary (GeoJSON-based)
+  - Address location markers with zoom
+  - Visual result indicators (green = resident, yellow = annexation zone)
+- **Precise Geospatial Detection**: Uses official municipal boundary polygon (not mock data)
+- **Responsive Civic Design**: Professional governmental aesthetic, mobile-friendly
+
+### Identified Data Insights
+- **3 unincorporated doughnut holes** identified meeting force-annexation criteria:
+  - Island 1: ~9 acres
+  - Island 2: ~3 acres
+  - Island 3: <1 acre
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 20+
+- npm
+
+### Installation & Running
+```bash
+npm install
+npm run dev
+```
+
+The app starts on `http://localhost:5000` with both backend (Express) and frontend (Vite) running on the same port.
+
+## 🏗️ Architecture
+
+### Tech Stack
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Shadcn/ui
+- **Mapping**: Leaflet 4.2.1 + react-leaflet with OpenStreetMap tiles
+- **Geocoding**: OpenStreetMap Nominatim API
+- **Geospatial Analysis**: Turf.js (point-in-polygon detection)
+- **Data**: Official GeoJSON municipal boundary
+
+### Project Structure
+```
+client/src/
+├── components/
+│   ├── AddressChecker.tsx      ← Main tool with map integration
+│   ├── WonderLakeMap.tsx       ← Interactive Leaflet map
+│   ├── Hero.tsx                ← Campaign hero section
+│   ├── BenefitsGrid.tsx        ← Three pillar cards
+│   ├── FAQ.tsx, Mission.tsx, Vision.tsx
+│   └── Navbar.tsx, Footer.tsx
+├── data/
+│   ├── village-data.ts         ← Exports official boundary GeoJSON
+│   └── wonder-lake-boundary.json ← Official municipal boundary
+└── pages/
+    └── home.tsx
+```
+
+### Data Flow
+1. User enters address → Nominatim geocodes to coordinates
+2. Turf.js performs point-in-polygon check against boundary
+3. Marker placed on Leaflet map
+4. Result shown visually (color-coded) + text confirmation
+
+## 📋 Design System
+
+- **Primary**: Deep Lake Blue (#005f73) — authority, trust
+- **Accent**: Teal (#94d2bd) — highlights, interactions
+- **Responsive**: Mobile-first, breakpoints at 768px & 1024px
+- **Accessibility**: WCAG AA compliant, readable by all demographics
+
+See `design_guidelines.md` for complete specifications.
+
+## 🛣️ Roadmap
+
+### Phase 2: Enhanced Mapping & Analytics
+- [ ] "Domino Strategy" Map (key connector properties)
+- [ ] Island Visualization (color-coded force-annexation zones)
+- [ ] Subdivision Boundaries (Deep Spring Woods, Sunrise Ridge)
+
+### Phase 3: Progress Tracking
+- [ ] "Race to 51%" progress bars per subdivision
+- [ ] Live Statistics Dashboard (pledges, signatures, engagement)
+
+### Phase 4: Legal & Outreach Tools
+- [ ] Pre-Annexation Agreement templates (downloadable)
+- [ ] "Visualizing the Wallet" tax comparison calculator
+- [ ] Email campaign integration
+
+### Phase 5: Advanced Intelligence
+- [ ] Property Title Integration
+- [ ] Public Meeting Scheduler
+
+## 💾 Storage
+
+Currently using in-memory storage. Can scale to PostgreSQL for tracking campaigns, pledges, and user engagement as features develop.
+
+## 🧪 Testing the Address Checker
+
+Try these Wonder Lake, IL addresses to test:
+- Valid address inside boundary → Green result
+- Address outside boundary → Yellow result  
+- Invalid/non-existent → Error message
+
+## 👥 Contributing
+
+1. Follow the code conventions in existing components (React hooks, Tailwind, Shadcn/ui patterns)
+2. Add `data-testid` attributes to interactive elements
+3. Keep components focused and collapsible where possible
+4. Refer to `design_guidelines.md` for styling standards
+
+## 📞 Support & Contact
+
+For questions about the campaign or technical implementation, refer to the project documentation or contact the development team.
+
+---
+
+**Last Updated**: November 25, 2024  
+**Status**: Production Ready ✅
