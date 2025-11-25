@@ -55,6 +55,11 @@ export default function WonderLakeMap({ markerPosition, isInside }: WonderLakeMa
         zoom={13}
         style={{ height: '100%', width: '100%' }}
         ref={mapRef}
+        scrollWheelZoom={false}
+        zoomControl={false}
+        doubleClickZoom={false}
+        touchZoom={false}
+        dragging={false}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

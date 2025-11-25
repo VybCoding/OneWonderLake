@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLocation, Link } from "wouter";
 
 interface NavbarProps {
   onNavClick?: (section: string) => void;
@@ -8,20 +9,25 @@ interface NavbarProps {
 
 export default function Navbar({ onNavClick }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [location] = useLocation();
 
   const navItems = [
-    { label: "Mission", id: "mission" },
-    { label: "Benefits", id: "benefits" },
-    { label: "Address Check", id: "address" },
-    { label: "FAQ", id: "faq" },
+    { label: "Mission", id: "mission", type: "scroll" as const },
+    { label: "Benefits", id: "benefits", type: "scroll" as const },
+    { label: "Address Check", id: "address", type: "scroll" as const },
+    { label: "Tax Estimator", id: "tax-estimator", type: "link" as const, href: "/tax-estimator" },
+    { label: "FAQ", id: "faq", type: "scroll" as const },
   ];
 
-  const handleNavClick = (id: string) => {
+  const handleNavClick = (item: typeof navItems[0]) => {
     setMobileMenuOpen(false);
+    if (item.type === "link") {
+      return;
+    }
     if (onNavClick) {
-      onNavClick(id);
+      onNavClick(item.id);
     } else {
-      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+      document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth" });
     }
   };
 
@@ -31,22 +37,33 @@ export default function Navbar({ onNavClick }: NavbarProps) {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex-shrink-0">
-            <h1 className="text-xl font-bold" data-testid="text-logo">
+            <Link href="/" className="text-xl font-bold hover:opacity-80 transition-opacity" data-testid="text-logo">
               One Wonder Lake
-            </h1>
+            </Link>
           </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex md:items-center md:gap-6">
             {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => handleNavClick(item.id)}
-                className="text-primary-foreground hover:text-accent transition-colors px-3 py-2"
-                data-testid={`link-nav-${item.id}`}
-              >
-                {item.label}
-              </button>
+              item.type === "link" ? (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  className={`text-primary-foreground hover:text-accent transition-colors px-3 py-2 ${location === item.href ? "text-accent" : ""}`}
+                  data-testid={`link-nav-${item.id}`}
+                >
+                  {item.label}
+                </Link>
+              ) : (
+                <button
+                  key={item.id}
+                  onClick={() => handleNavClick(item)}
+                  className="text-primary-foreground hover:text-accent transition-colors px-3 py-2"
+                  data-testid={`link-nav-${item.id}`}
+                >
+                  {item.label}
+                </button>
+              )
             ))}
           </div>
 
@@ -74,14 +91,26 @@ export default function Navbar({ onNavClick }: NavbarProps) {
         <div className="md:hidden bg-primary border-t border-primary-border">
           <div className="px-4 py-4 space-y-2">
             {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => handleNavClick(item.id)}
-                className="block w-full text-left px-4 py-3 text-primary-foreground hover:bg-accent hover:text-accent-foreground rounded-md transition-colors"
-                data-testid={`link-mobile-${item.id}`}
-              >
-                {item.label}
-              </button>
+              item.type === "link" ? (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`block w-full text-left px-4 py-3 text-primary-foreground hover:bg-accent hover:text-accent-foreground rounded-md transition-colors ${location === item.href ? "bg-accent/20" : ""}`}
+                  data-testid={`link-mobile-${item.id}`}
+                >
+                  {item.label}
+                </Link>
+              ) : (
+                <button
+                  key={item.id}
+                  onClick={() => handleNavClick(item)}
+                  className="block w-full text-left px-4 py-3 text-primary-foreground hover:bg-accent hover:text-accent-foreground rounded-md transition-colors"
+                  data-testid={`link-mobile-${item.id}`}
+                >
+                  {item.label}
+                </button>
+              )
             ))}
           </div>
         </div>
