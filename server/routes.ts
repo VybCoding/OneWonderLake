@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertInterestedPartySchema } from "@shared/schema";
+import { insertInterestedPartySchema, insertSearchedAddressSchema } from "@shared/schema";
 
 const submissionCounts = new Map<string, { count: number; firstSubmission: number }>();
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
@@ -120,6 +120,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Searched addresses tracking (public - for analytics)
+  app.post("/api/searched-address", async (req: Request, res: Response) => {
+    try {
+      const validationResult = insertSearchedAddressSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid data provided",
+          details: validationResult.error.errors 
+        });
+      }
+
+      const data = validationResult.data;
+      await storage.createSearchedAddress(data);
+
+      res.status(201).json({ success: true });
+    } catch (error) {
+      console.error("Error saving searched address:", error);
+      res.status(500).json({ error: "Failed to save searched address" });
+    }
+  });
+
   // Interested parties routes (public submission)
   app.post("/api/interested", async (req: Request, res: Response) => {
     try {
@@ -194,6 +216,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error checking admin status:", error);
       res.status(500).json({ error: "Failed to check admin status" });
+    }
+  });
+
+  // Get searched addresses (admin only)
+  app.get("/api/admin/searched-addresses", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const addresses = await storage.getSearchedAddresses();
+      res.json(addresses);
+    } catch (error) {
+      console.error("Error fetching searched addresses:", error);
+      res.status(500).json({ error: "Failed to fetch searched addresses" });
     }
   });
 
