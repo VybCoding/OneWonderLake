@@ -1,13 +1,16 @@
 # One Wonder Lake - Civic Advocacy & Annexation Campaign
 
-A data-driven civic advocacy website powered by interactive geospatial analysis and mapping technology.
+A data-driven civic advocacy website powered by interactive geospatial analysis, resident interest tracking, and admin dashboard for campaign management.
 
 ## 🎯 Mission
 
 Unite currently unincorporated neighborhoods—specifically "doughnut hole" islands and edge subdivisions—under a single Wonder Lake village government to:
 - **Bring tax dollars home** (capture LGDF state funds)
+- **Gain a voice** (voting rights and representation)
+- **Define our future** (local self-determination)
 - **Establish local control** (unified code enforcement, property rights protection)
 - **Improve safety & services** (dedicated policing, community amenities)
+- **Golf cart freedom** (local ordinance benefits)
 
 ## ✅ Current Status
 
@@ -38,6 +41,29 @@ Unite currently unincorporated neighborhoods—specifically "doughnut hole" isla
   - Status quo risks and urgency
   - Current resident benefits
 
+- **Interest Tracking System**: 
+  - Residents can express interest in annexation via dialog forms
+  - Interest form appears in Address Checker (for unincorporated addresses) and Tax Estimator (after calculation)
+  - Collects name, email, address, phone (optional), and notes
+  - Data stored in PostgreSQL database with source tracking
+  - Security features: rate limiting (5 submissions/hour per IP), input validation with length constraints, duplicate email detection
+
+- **Admin Dashboard** (`/admin`):
+  - Protected access via Replit Auth (Google, GitHub, email/password login)
+  - Display of all interested parties with detailed stats
+  - Source breakdown (Address Checker vs Tax Estimator submissions)
+  - Table view with contact info, address, notes, and submission date
+  - Campaign organizers can review and manage resident interest data
+
+- **Benefits Grid**: Six interactive pillar cards explaining annexation advantages:
+  - Bring State Tax Dollars Home (LGDF funding)
+  - Gain a Voice (Representation & Voting)
+  - Define Our Future (Self-Determination)
+  - Establish Local Control (Code Enforcement & Rights)
+  - Improve Safety & Services (Policing & Amenities)
+  - Golf Cart Freedom (Local Ordinance Benefits)
+  - Each card clickable with in-depth content dialog
+
 ### Identified Data Insights
 - **3 unincorporated doughnut holes** identified meeting force-annexation criteria:
   - Island 1: ~9 acres
@@ -62,6 +88,9 @@ The app starts on `http://localhost:5000` with both backend (Express) and fronte
 
 ### Tech Stack
 - **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Shadcn/ui
+- **Backend**: Express.js, TypeScript
+- **Database**: PostgreSQL (Neon) with Drizzle ORM
+- **Authentication**: Replit Auth (OIDC) for admin access
 - **Mapping**: Leaflet 4.2.1 + react-leaflet with OpenStreetMap tiles
 - **Geocoding**: OpenStreetMap Nominatim API
 - **Geospatial Analysis**: Turf.js (point-in-polygon detection)
@@ -71,20 +100,30 @@ The app starts on `http://localhost:5000` with both backend (Express) and fronte
 ```
 client/src/
 ├── components/
-│   ├── AddressChecker.tsx      ← Main tool with map integration
+│   ├── AddressChecker.tsx      ← Main tool with map integration + interest form
 │   ├── WonderLakeMap.tsx       ← Interactive Leaflet map (locked zoom)
-│   ├── TaxEstimator.tsx        ← Post-annexation tax calculator
+│   ├── TaxEstimator.tsx        ← Post-annexation tax calculator + interest form
+│   ├── InterestForm.tsx        ← Reusable interest submission dialog
+│   ├── BenefitsGrid.tsx        ← Six pillar cards with click-to-expand dialogs
 │   ├── FAQ.tsx                 ← 11-item persuasive FAQ
 │   ├── Hero.tsx                ← Campaign hero section
-│   ├── BenefitsGrid.tsx        ← Three pillar cards
-│   ├── Mission.tsx, Vision.tsx
+│   ├── Mission.tsx, Vision.tsx ← Core messaging
 │   └── Navbar.tsx, Footer.tsx
 ├── data/
 │   ├── village-data.ts         ← Exports official boundary GeoJSON
 │   └── wonder-lake-boundary.json ← Official municipal boundary
 └── pages/
     ├── home.tsx                ← Main landing page (Mission, Benefits, Address Check, FAQ, Vision)
-    └── tax-estimator.tsx       ← Dedicated tax calculator page
+    ├── tax-estimator.tsx       ← Dedicated tax calculator page
+    └── admin.tsx               ← Protected admin dashboard (Replit Auth required)
+
+server/
+├── routes.ts                   ← API endpoints for address checking, tax estimation, interest submissions, admin data
+├── storage.ts                  ← Database storage interface using Drizzle ORM
+└── vite.ts                     ← Vite dev server setup
+
+shared/
+└── schema.ts                   ← Drizzle ORM schema definitions and Zod validation schemas
 ```
 
 ### Data Flow
@@ -92,6 +131,9 @@ client/src/
 2. Turf.js performs point-in-polygon check against boundary
 3. Marker placed on Leaflet map
 4. Result shown visually (color-coded) + text confirmation
+5. If interested, user fills form in dialog → Rate-limited API submission
+6. Data stored in PostgreSQL with IP-based rate limiting and duplicate detection
+7. Admin can view all submissions via protected dashboard
 
 ## 📋 Design System
 
@@ -116,16 +158,26 @@ See `design_guidelines.md` for complete specifications.
 ### Phase 4: Legal & Outreach Tools
 - [ ] Pre-Annexation Agreement templates (downloadable)
 - [ ] Advanced "Visualizing the Wallet" comparisons per subdivision
-- [ ] Email campaign integration
+- [ ] Email campaign integration (Resend)
 
 ### Phase 5: Advanced Intelligence
 - [ ] Property Title Integration
 - [ ] Public Meeting Scheduler
 - [ ] Resident testimonial video gallery
 
-## 💾 Storage
+## 💾 Database
 
-Currently using in-memory storage. Can scale to PostgreSQL for tracking campaigns, pledges, and user engagement as features develop.
+Uses PostgreSQL (Neon-backed) with Drizzle ORM for:
+- **Interested Parties**: Stores resident interest submissions with contact info, source tracking, and timestamp
+- **Future expansion**: Can add pledge tracking, event registrations, and campaign metrics
+
+## 🔐 Security Features
+
+- **Rate Limiting**: 5 submissions per IP per hour on interest form endpoint
+- **Input Validation**: Strict length constraints on all form fields (name, email, address, phone, notes)
+- **Duplicate Detection**: Prevents duplicate email submissions, returns helpful message
+- **Admin Authentication**: Replit Auth (Google, GitHub, email/password) protects admin dashboard
+- **Dialog Z-index**: Interest form dialog uses z-[9999] to ensure visibility above map
 
 ## 🧪 Testing the Address Checker
 
@@ -140,6 +192,7 @@ Try these Wonder Lake, IL addresses to test:
 2. Add `data-testid` attributes to interactive elements
 3. Keep components focused and collapsible where possible
 4. Refer to `design_guidelines.md` for styling standards
+5. All form submissions use Drizzle ORM schema validation via `drizzle-zod`
 
 ## 📞 Support & Contact
 
@@ -149,19 +202,23 @@ For questions about the campaign or technical implementation, refer to the proje
 
 ## 📝 Navigation Structure
 
-The website now uses two distinct page types:
+The website uses a hybrid navigation model:
 
 ### Single-Page Sections (Home Route `/`)
 - **Mission**: Campaign core messaging
-- **Benefits**: Three-pillar benefit cards (Tax, Control, Safety)
+- **Benefits**: Six interactive pillar cards (Tax, Representation, Self-Determination, Local Control, Safety, Golf Carts)
 - **Address Check**: Interactive address eligibility checker with live map
 - **FAQ**: 11-item myth-busting accordion
 - All scroll-to-section navigation via navbar
 
 ### Dedicated Pages
 - **Tax Estimator** (`/tax-estimator`): Full-page property tax calculation tool with comprehensive breakdown
+- **Admin Dashboard** (`/admin`): Protected admin panel for reviewing interested parties (requires Replit Auth)
 
 Navigation automatically adjusts: scroll links work on home page, page links navigate to dedicated pages.
 
+---
+
 **Last Updated**: November 25, 2024  
-**Status**: Production Ready ✅
+**Status**: Production Ready ✅  
+**Current Version**: 4.0 (Interest Tracking + Admin Dashboard)
