@@ -62,3 +62,22 @@ export const insertInterestedPartySchema = createInsertSchema(interestedParties)
 
 export type InsertInterestedParty = z.infer<typeof insertInterestedPartySchema>;
 export type InterestedParty = typeof interestedParties.$inferSelect;
+
+// Searched addresses - track all address lookups for analytics
+export const searchedAddresses = pgTable("searched_addresses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  address: varchar("address").notNull(),
+  result: varchar("result").notNull(), // 'resident', 'annexation', 'other_municipality', 'outside_area', 'not_found'
+  municipalityName: varchar("municipality_name"), // For other_municipality results
+  latitude: varchar("latitude"),
+  longitude: varchar("longitude"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSearchedAddressSchema = createInsertSchema(searchedAddresses).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSearchedAddress = z.infer<typeof insertSearchedAddressSchema>;
+export type SearchedAddress = typeof searchedAddresses.$inferSelect;

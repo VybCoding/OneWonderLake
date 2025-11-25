@@ -1,10 +1,13 @@
 import {
   users,
   interestedParties,
+  searchedAddresses,
   type User,
   type UpsertUser,
   type InterestedParty,
   type InsertInterestedParty,
+  type SearchedAddress,
+  type InsertSearchedAddress,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -20,6 +23,10 @@ export interface IStorage {
   getInterestedParties(): Promise<InterestedParty[]>;
   getInterestedPartyByEmail(email: string): Promise<InterestedParty | undefined>;
   markEmailSent(id: string): Promise<void>;
+  
+  // Searched addresses operations
+  createSearchedAddress(address: InsertSearchedAddress): Promise<SearchedAddress>;
+  getSearchedAddresses(): Promise<SearchedAddress[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -73,6 +80,22 @@ export class DatabaseStorage implements IStorage {
       .update(interestedParties)
       .set({ emailSent: true })
       .where(eq(interestedParties.id, id));
+  }
+
+  // Searched addresses operations
+  async createSearchedAddress(address: InsertSearchedAddress): Promise<SearchedAddress> {
+    const [newAddress] = await db
+      .insert(searchedAddresses)
+      .values(address)
+      .returning();
+    return newAddress;
+  }
+
+  async getSearchedAddresses(): Promise<SearchedAddress[]> {
+    return await db
+      .select()
+      .from(searchedAddresses)
+      .orderBy(desc(searchedAddresses.createdAt));
   }
 }
 
