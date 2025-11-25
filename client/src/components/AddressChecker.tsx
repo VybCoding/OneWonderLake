@@ -16,6 +16,32 @@ const MAX_DISTANCE_MILES = 2;
 
 type ResultStatus = "resident" | "annexation" | "other_municipality" | null;
 
+type SearchResult = "resident" | "annexation" | "other_municipality" | "outside_area" | "not_found";
+
+async function saveSearchedAddress(
+  address: string,
+  result: SearchResult,
+  municipalityName?: string,
+  latitude?: string,
+  longitude?: string
+) {
+  try {
+    await fetch("/api/searched-address", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        address,
+        result,
+        municipalityName: municipalityName || null,
+        latitude: latitude || null,
+        longitude: longitude || null,
+      }),
+    });
+  } catch (err) {
+    console.error("Failed to save searched address:", err);
+  }
+}
+
 export default function AddressChecker() {
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
@@ -50,6 +76,7 @@ export default function AddressChecker() {
 
       if (!data || data.length === 0) {
         setError("Address not found. Please try a different address.");
+        saveSearchedAddress(address, "not_found");
         setLoading(false);
         return;
       }
@@ -69,6 +96,7 @@ export default function AddressChecker() {
       // Reject addresses more than 2 miles from Wonder Lake boundary
       if (distanceToWonderLake > MAX_DISTANCE_MILES) {
         setError(`This address is outside our service area. Please enter an address within ${MAX_DISTANCE_MILES} miles of Wonder Lake.`);
+        saveSearchedAddress(address, "outside_area", undefined, lat, lon);
         setLoading(false);
         return;
       }
@@ -77,6 +105,7 @@ export default function AddressChecker() {
       if (isInsideWonderLake) {
         setResult("resident");
         setMarkerPosition(coords);
+        saveSearchedAddress(address, "resident", undefined, lat, lon);
         return;
       }
 
@@ -87,6 +116,7 @@ export default function AddressChecker() {
           setResult("other_municipality");
           setMunicipalityName(feature.properties.CORPNAME);
           setMarkerPosition(coords);
+          saveSearchedAddress(address, "other_municipality", feature.properties.CORPNAME, lat, lon);
           return;
         }
       }
@@ -94,6 +124,7 @@ export default function AddressChecker() {
       // Not in Wonder Lake or any other municipality - eligible for annexation
       setResult("annexation");
       setMarkerPosition(coords);
+      saveSearchedAddress(address, "annexation", undefined, lat, lon);
     } catch (err) {
       console.error("Error checking address:", err);
       setError("Something went wrong. Please try again.");
