@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -16,7 +16,8 @@ import {
   Shield,
   FileText,
   AlertCircle,
-  Search
+  Search,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -30,12 +31,20 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog";
 import type { InterestedParty, SearchedAddress } from "@shared/schema";
 
 export default function AdminPage() {
   const { toast } = useToast();
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
+  const [selectedParty, setSelectedParty] = useState<InterestedParty | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -292,11 +301,17 @@ export default function AdminPage() {
                       </TableHeader>
                       <TableBody>
                         {interestedParties.map((party) => (
-                          <TableRow key={party.id} data-testid={`row-party-${party.id}`}>
+                          <TableRow 
+                            key={party.id} 
+                            data-testid={`row-party-${party.id}`}
+                            className="cursor-pointer hover-elevate"
+                            onClick={() => setSelectedParty(party)}
+                          >
                             <TableCell className="font-medium">{party.name}</TableCell>
                             <TableCell>
                               <a 
-                                href={`mailto:${party.email}`} 
+                                href={`mailto:${party.email}`}
+                                onClick={(e) => e.stopPropagation()}
                                 className="flex items-center gap-1 text-primary hover:underline"
                               >
                                 <Mail className="w-3 h-3" />
@@ -313,6 +328,7 @@ export default function AdminPage() {
                               {party.phone ? (
                                 <a 
                                   href={`tel:${party.phone}`}
+                                  onClick={(e) => e.stopPropagation()}
                                   className="flex items-center gap-1 text-primary hover:underline"
                                 >
                                   <Phone className="w-3 h-3" />
@@ -452,6 +468,92 @@ export default function AdminPage() {
           </Button>
         </div>
       </main>
+
+      {/* Party Details Dialog */}
+      <Dialog open={!!selectedParty} onOpenChange={(open) => !open && setSelectedParty(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-party-details">
+          <DialogHeader className="flex flex-row items-center justify-between space-y-0">
+            <DialogTitle>Party Details</DialogTitle>
+            <DialogClose className="opacity-70 hover:opacity-100" data-testid="button-close-dialog">
+              <X className="h-4 w-4" />
+            </DialogClose>
+          </DialogHeader>
+
+          {selectedParty && (
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Name</p>
+                    <p className="font-medium">{selectedParty.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <a 
+                      href={`mailto:${selectedParty.email}`}
+                      className="text-primary hover:underline font-medium"
+                    >
+                      {selectedParty.email}
+                    </a>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Phone</p>
+                    <p className="font-medium">
+                      {selectedParty.phone ? (
+                        <a href={`tel:${selectedParty.phone}`} className="text-primary hover:underline">
+                          {selectedParty.phone}
+                        </a>
+                      ) : (
+                        "-"
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Date Added</p>
+                    <p className="font-medium">
+                      {selectedParty.createdAt ? format(new Date(selectedParty.createdAt), "MMM d, yyyy h:mm a") : "-"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Address Information */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Address Information</h3>
+                <div className="flex items-start gap-3 p-4 bg-muted rounded-lg">
+                  <MapPin className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-1" />
+                  <p className="font-medium break-words">{selectedParty.address}</p>
+                </div>
+              </div>
+
+              {/* Source Information */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Source Information</h3>
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Source</p>
+                    <Badge variant={selectedParty.source === "address_checker" ? "default" : "secondary"}>
+                      {selectedParty.source === "address_checker" ? "Address Checker" : "Tax Estimator"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes Section */}
+              {selectedParty.notes && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Notes</h3>
+                  <div className="p-4 bg-muted rounded-lg">
+                    <p className="text-sm whitespace-pre-wrap break-words">{selectedParty.notes}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
