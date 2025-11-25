@@ -6,18 +6,26 @@ One Wonder Lake is a data-driven civic advocacy website and political campaign f
 ## Core Mission
 Unite currently unincorporated neighborhoods—specifically "doughnut hole" islands and edge subdivisions like Deep Spring Woods and Sunrise Ridge—under a single Wonder Lake village government.
 
-## Key Campaign Arguments
+## Key Campaign Arguments (5 Pillars)
 
-### 1. Bringing Tax Dollars Home
-Capture LGDF (Local Government Distributive Fund) money that currently stays with the state to fund Wonder Lake infrastructure and services.
+The campaign argues that annexation is not just beneficial, but strategically necessary to secure the community's future. Each pillar is presented as a clickable card on the homepage with in-depth content in a dialog.
 
-### 2. Local Control & Property Rights
+### 1. Bring State Tax Dollars Home
+Capture LGDF (Local Government Distributive Fund) money that currently stays with the state to fund Wonder Lake infrastructure and services. This creates new revenue without raising property taxes.
+
+### 2. Gain a Voice (Representation)
+Move from "postal code residents" to voting citizens. Annexation gives residents the immediate right to vote for the Village President and Trustees, ensuring the government that impacts their daily lives actually answers to them.
+
+### 3. Define Our Future (Self-Determination)
+Shift the power from County officials to neighbors. This allows Wonder Lake to protect its rural character and invest in its identity as a safe, recreational family community.
+
+### 4. Establish Local Control & Protect Rights
 Use Pre-Annexation Agreements to "grandfather" existing rural liberties (sheds, fences, etc.) while ensuring unified code enforcement protects property values.
 
-### 3. Improved Safety & Services
+### 5. Improve Safety & Services
 Replace sporadic County Sheriff coverage with dedicated Village policing and fund local amenities like playgrounds and green spaces.
 
-### 4. The "Inevitability" Argument
+### Supporting Argument: The "Inevitability" Factor
 For residents in identified "force annexation" zones (<60 acres, wholly surrounded), voluntary annexation allows them to negotiate terms now rather than facing involuntary inclusion later.
 
 ## Technical Implementation
@@ -91,7 +99,7 @@ Based on geospatial analysis, the system has identified:
 ### Page Components
 - `Hero.tsx`: Campaign tagline and primary CTA
 - `Mission.tsx`: Core messaging about annexation benefits
-- `BenefitsGrid.tsx`: Three-pillar benefit cards (Tax, Control, Safety)
+- `BenefitsGrid.tsx`: Five-pillar benefit cards with click-to-expand dialogs containing in-depth content (Tax, Representation, Self-Determination, Local Control, Safety)
 - `FAQ.tsx`: Myth-busting accordion for common concerns
 - `Vision.tsx`: Community future messaging
 - `Footer.tsx`: Basic footer with attribution
@@ -150,6 +158,11 @@ Currently using in-memory storage (MemStorage) for any data persistence needs. C
 - Demonstrate successful civic tech + grassroots organizing model for other communities
 
 ## Recent Changes
+- **2024-11-25 (v3)**: Expanded Benefits section from 3 to 5 pillars with click-to-expand dialogs
+  - Added: "Gain a Voice (Representation)" pillar about voting rights
+  - Added: "Define Our Future (Self-Determination)" pillar about local vs County control
+  - Each card now clickable with in-depth content including headline, paragraphs, and key points
+  - Fixed navbar z-index (z-[1000]) to prevent map overlay on scroll
 - **2024-11-25 (v2)**: Moved Property Tax Estimator to dedicated page (`/tax-estimator`) accessible via navbar "Tax Estimator" tab to reduce homepage information overflow
 - **2024-11-25 (v2)**: Locked interactive map zoom to prevent scroll-wheel interference with page navigation
   - Disabled: scroll-wheel zoom, double-click zoom, touch zoom, dragging
