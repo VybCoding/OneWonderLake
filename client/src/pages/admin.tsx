@@ -15,7 +15,8 @@ import {
   Home,
   Shield,
   FileText,
-  AlertCircle
+  AlertCircle,
+  Search
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -28,7 +29,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import type { InterestedParty } from "@shared/schema";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { InterestedParty, SearchedAddress } from "@shared/schema";
 
 export default function AdminPage() {
   const { toast } = useToast();
@@ -60,6 +62,17 @@ export default function AdminPage() {
     error: partiesError,
   } = useQuery<InterestedParty[]>({
     queryKey: ["/api/admin/interested"],
+    enabled: isAuthenticated && adminCheck?.isAdmin,
+    retry: false,
+  });
+
+  // Fetch searched addresses
+  const { 
+    data: searchedAddresses, 
+    isLoading: addressesLoading,
+    error: addressesError,
+  } = useQuery<SearchedAddress[]>({
+    queryKey: ["/api/admin/searched-addresses"],
     enabled: isAuthenticated && adminCheck?.isAdmin,
     retry: false,
   });
@@ -162,7 +175,7 @@ export default function AdminPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Interested</CardTitle>
@@ -172,6 +185,20 @@ export default function AdminPage() {
                 <Users className="w-5 h-5 text-primary" />
                 <span className="text-3xl font-bold" data-testid="text-total-interested">
                   {interestedParties?.length || 0}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Address Searches</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <Search className="w-5 h-5 text-primary" />
+                <span className="text-3xl font-bold" data-testid="text-total-searches">
+                  {searchedAddresses?.length || 0}
                 </span>
               </div>
             </CardContent>
@@ -206,110 +233,214 @@ export default function AdminPage() {
           </Card>
         </div>
 
-        {/* Interested Parties Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Interested Parties
-            </CardTitle>
-            <CardDescription>
-              All residents who have expressed interest in voluntary annexation
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {partiesLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto mb-2"></div>
-                <p className="text-muted-foreground">Loading data...</p>
-              </div>
-            ) : partiesError ? (
-              <div className="text-center py-8">
-                <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-2" />
-                <p className="text-destructive">Failed to load interested parties</p>
-              </div>
-            ) : !interestedParties || interestedParties.length === 0 ? (
-              <div className="text-center py-12">
-                <Users className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
-                <p className="text-muted-foreground text-lg mb-2">No interested parties yet</p>
-                <p className="text-sm text-muted-foreground">
-                  Residents who express interest through the Address Checker or Tax Estimator will appear here.
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Address</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Notes</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {interestedParties.map((party) => (
-                      <TableRow key={party.id} data-testid={`row-party-${party.id}`}>
-                        <TableCell className="font-medium">{party.name}</TableCell>
-                        <TableCell>
-                          <a 
-                            href={`mailto:${party.email}`} 
-                            className="flex items-center gap-1 text-primary hover:underline"
-                          >
-                            <Mail className="w-3 h-3" />
-                            {party.email}
-                          </a>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                            <span className="max-w-[200px] truncate">{party.address}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {party.phone ? (
-                            <a 
-                              href={`tel:${party.phone}`}
-                              className="flex items-center gap-1 text-primary hover:underline"
-                            >
-                              <Phone className="w-3 h-3" />
-                              {party.phone}
-                            </a>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={party.source === "address_checker" ? "default" : "secondary"}>
-                            {party.source === "address_checker" ? "Address" : "Tax"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Calendar className="w-3 h-3" />
-                            {party.createdAt ? format(new Date(party.createdAt), "MMM d, yyyy") : "-"}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {party.notes ? (
-                            <span className="max-w-[150px] truncate block text-sm" title={party.notes}>
-                              {party.notes}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Data Tables with Tabs */}
+        <Tabs defaultValue="interested" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="interested" className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Interested Parties ({interestedParties?.length || 0})
+            </TabsTrigger>
+            <TabsTrigger value="searches" className="flex items-center gap-2">
+              <Search className="w-4 h-4" />
+              Address Searches ({searchedAddresses?.length || 0})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="interested">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="w-5 h-5" />
+                  Interested Parties
+                </CardTitle>
+                <CardDescription>
+                  All residents who have expressed interest in voluntary annexation
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {partiesLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto mb-2"></div>
+                    <p className="text-muted-foreground">Loading data...</p>
+                  </div>
+                ) : partiesError ? (
+                  <div className="text-center py-8">
+                    <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-2" />
+                    <p className="text-destructive">Failed to load interested parties</p>
+                  </div>
+                ) : !interestedParties || interestedParties.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Users className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
+                    <p className="text-muted-foreground text-lg mb-2">No interested parties yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Residents who express interest through the Address Checker or Tax Estimator will appear here.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Address</TableHead>
+                          <TableHead>Phone</TableHead>
+                          <TableHead>Source</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Notes</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {interestedParties.map((party) => (
+                          <TableRow key={party.id} data-testid={`row-party-${party.id}`}>
+                            <TableCell className="font-medium">{party.name}</TableCell>
+                            <TableCell>
+                              <a 
+                                href={`mailto:${party.email}`} 
+                                className="flex items-center gap-1 text-primary hover:underline"
+                              >
+                                <Mail className="w-3 h-3" />
+                                {party.email}
+                              </a>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                                <span className="max-w-[200px] truncate">{party.address}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {party.phone ? (
+                                <a 
+                                  href={`tel:${party.phone}`}
+                                  className="flex items-center gap-1 text-primary hover:underline"
+                                >
+                                  <Phone className="w-3 h-3" />
+                                  {party.phone}
+                                </a>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={party.source === "address_checker" ? "default" : "secondary"}>
+                                {party.source === "address_checker" ? "Address" : "Tax"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <Calendar className="w-3 h-3" />
+                                {party.createdAt ? format(new Date(party.createdAt), "MMM d, yyyy") : "-"}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {party.notes ? (
+                                <span className="max-w-[150px] truncate block text-sm" title={party.notes}>
+                                  {party.notes}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="searches">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Search className="w-5 h-5" />
+                  Address Searches
+                </CardTitle>
+                <CardDescription>
+                  All addresses that have been looked up in the Address Checker
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {addressesLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto mb-2"></div>
+                    <p className="text-muted-foreground">Loading data...</p>
+                  </div>
+                ) : addressesError ? (
+                  <div className="text-center py-8">
+                    <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-2" />
+                    <p className="text-destructive">Failed to load searched addresses</p>
+                  </div>
+                ) : !searchedAddresses || searchedAddresses.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Search className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
+                    <p className="text-muted-foreground text-lg mb-2">No address searches yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Addresses looked up in the Address Checker will appear here.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Address</TableHead>
+                          <TableHead>Result</TableHead>
+                          <TableHead>Municipality</TableHead>
+                          <TableHead>Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {searchedAddresses.map((search) => (
+                          <TableRow key={search.id} data-testid={`row-search-${search.id}`}>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                                <span className="max-w-[300px] truncate">{search.address}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant={
+                                  search.result === "resident" ? "default" :
+                                  search.result === "annexation" ? "secondary" :
+                                  search.result === "other_municipality" ? "outline" :
+                                  "destructive"
+                                }
+                              >
+                                {search.result === "resident" ? "Village Resident" :
+                                 search.result === "annexation" ? "Annexation Zone" :
+                                 search.result === "other_municipality" ? "Other Municipality" :
+                                 search.result === "outside_area" ? "Outside Area" :
+                                 "Not Found"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {search.municipalityName ? (
+                                <span className="text-sm">{search.municipalityName}</span>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <Calendar className="w-3 h-3" />
+                                {search.createdAt ? format(new Date(search.createdAt), "MMM d, yyyy h:mm a") : "-"}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         {/* Back to Home */}
         <div className="mt-8 text-center">
