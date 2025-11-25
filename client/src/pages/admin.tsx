@@ -18,7 +18,9 @@ import {
   AlertCircle,
   Search,
   X,
-  Download
+  Download,
+  ThumbsUp,
+  ThumbsDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -109,7 +111,7 @@ export default function AdminPage() {
     }
 
     // Define CSV headers
-    const headers = ["Name", "Email", "Phone", "Address", "Source", "Date Added", "Notes"];
+    const headers = ["Name", "Email", "Phone", "Address", "Interest Status", "Source", "Date Added", "Notes"];
 
     // Convert data to CSV rows
     const rows = interestedParties.map((party) => [
@@ -117,6 +119,7 @@ export default function AdminPage() {
       `"${party.email.replace(/"/g, '""')}"`,
       `"${(party.phone || "").replace(/"/g, '""')}"`,
       `"${party.address.replace(/"/g, '""')}"`,
+      party.interested === false ? "Not Interested" : "Interested",
       party.source === "address_checker" ? "Address Checker" : "Tax Estimator",
       party.createdAt ? format(new Date(party.createdAt), "MMM d, yyyy h:mm a") : "",
       `"${(party.notes || "").replace(/"/g, '""').replace(/\n/g, " ")}"`,
@@ -272,24 +275,38 @@ export default function AdminPage() {
       <main className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="text-admin-title">
-            Interested Parties Dashboard
+            Community Sentiment Dashboard
           </h1>
           <p className="text-muted-foreground">
-            View and manage residents who have expressed interest in annexation.
+            View and manage resident feedback on annexation, both interested and disinterested.
           </p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Interested</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Interested</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-primary" />
-                <span className="text-3xl font-bold" data-testid="text-total-interested">
-                  {interestedParties?.length || 0}
+                <ThumbsUp className="w-5 h-5 text-green-600" />
+                <span className="text-3xl font-bold text-green-600" data-testid="text-total-interested">
+                  {interestedParties?.filter(p => p.interested !== false).length || 0}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Not Interested</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <ThumbsDown className="w-5 h-5 text-red-600" />
+                <span className="text-3xl font-bold text-red-600" data-testid="text-total-disinterested">
+                  {interestedParties?.filter(p => p.interested === false).length || 0}
                 </span>
               </div>
             </CardContent>
@@ -339,11 +356,11 @@ export default function AdminPage() {
         </div>
 
         {/* Data Tables with Tabs */}
-        <Tabs defaultValue="interested" className="w-full">
+        <Tabs defaultValue="responses" className="w-full">
           <TabsList className="mb-4">
-            <TabsTrigger value="interested" className="flex items-center gap-2">
+            <TabsTrigger value="responses" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
-              Interested Parties ({interestedParties?.length || 0})
+              Responses ({interestedParties?.length || 0})
             </TabsTrigger>
             <TabsTrigger value="searches" className="flex items-center gap-2">
               <Search className="w-4 h-4" />
@@ -351,17 +368,17 @@ export default function AdminPage() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="interested">
+          <TabsContent value="responses">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex-1">
                     <CardTitle className="flex items-center gap-2">
                       <Users className="w-5 h-5" />
-                      Interested Parties
+                      Resident Responses
                     </CardTitle>
                     <CardDescription>
-                      All residents who have expressed interest in voluntary annexation
+                      All residents who have shared their stance on annexation
                     </CardDescription>
                   </div>
                   <Button 
@@ -390,9 +407,9 @@ export default function AdminPage() {
                 ) : !interestedParties || interestedParties.length === 0 ? (
                   <div className="text-center py-12">
                     <Users className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
-                    <p className="text-muted-foreground text-lg mb-2">No interested parties yet</p>
+                    <p className="text-muted-foreground text-lg mb-2">No responses yet</p>
                     <p className="text-sm text-muted-foreground">
-                      Residents who express interest through the Address Checker or Tax Estimator will appear here.
+                      Residents who share their stance through the Address Checker or Tax Estimator will appear here.
                     </p>
                   </div>
                 ) : (
@@ -403,6 +420,7 @@ export default function AdminPage() {
                           <TableHead>Name</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Address</TableHead>
+                          <TableHead>Interest</TableHead>
                           <TableHead>Phone</TableHead>
                           <TableHead>Source</TableHead>
                           <TableHead>Date</TableHead>
@@ -433,6 +451,19 @@ export default function AdminPage() {
                                 <MapPin className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                                 <span className="max-w-[200px] truncate">{party.address}</span>
                               </div>
+                            </TableCell>
+                            <TableCell>
+                              {party.interested === false ? (
+                                <Badge variant="destructive" className="flex items-center gap-1 w-fit" data-testid={`badge-interest-${party.id}`}>
+                                  <ThumbsDown className="w-3 h-3" />
+                                  No
+                                </Badge>
+                              ) : (
+                                <Badge className="flex items-center gap-1 w-fit bg-green-600 hover:bg-green-700" data-testid={`badge-interest-${party.id}`}>
+                                  <ThumbsUp className="w-3 h-3" />
+                                  Yes
+                                </Badge>
+                              )}
                             </TableCell>
                             <TableCell>
                               {party.phone ? (
@@ -652,12 +683,26 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Source Information */}
+              {/* Interest & Source Information */}
               <div>
-                <h3 className="text-lg font-semibold mb-4">Source Information</h3>
-                <div className="space-y-2">
+                <h3 className="text-lg font-semibold mb-4">Interest & Source</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Source</p>
+                    <p className="text-sm text-muted-foreground mb-1">Interest Status</p>
+                    {selectedParty.interested === false ? (
+                      <Badge variant="destructive" className="flex items-center gap-1 w-fit">
+                        <ThumbsDown className="w-3 h-3" />
+                        Not Interested
+                      </Badge>
+                    ) : (
+                      <Badge className="flex items-center gap-1 w-fit bg-green-600 hover:bg-green-700">
+                        <ThumbsUp className="w-3 h-3" />
+                        Interested
+                      </Badge>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Source</p>
                     <Badge variant={selectedParty.source === "address_checker" ? "default" : "secondary"}>
                       {selectedParty.source === "address_checker" ? "Address Checker" : "Tax Estimator"}
                     </Badge>
