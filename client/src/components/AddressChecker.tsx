@@ -4,10 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import { point } from "@turf/helpers";
+import distance from "@turf/distance";
+import nearestPointOnLine from "@turf/nearest-point-on-line";
+import polygonToLine from "@turf/polygon-to-line";
 import { rawVillageData } from "@/data/village-data";
 import neighboringMunicipalities from "@/data/neighboring-municipalities.json";
 import WonderLakeMap from "@/components/WonderLakeMap";
 import InterestForm from "@/components/InterestForm";
+
+const MAX_DISTANCE_MILES = 2;
 
 type ResultStatus = "resident" | "annexation" | "other_municipality" | null;
 
@@ -55,6 +60,18 @@ export default function AddressChecker() {
 
       // First, check if point is inside Wonder Lake Village
       const wonderLakePolygon = rawVillageData.features[0];
+      
+      // Calculate distance from point to Wonder Lake boundary
+      const boundaryLine = polygonToLine(wonderLakePolygon as any);
+      const nearestPoint = nearestPointOnLine(boundaryLine as any, userPoint);
+      const distanceToWonderLake = distance(userPoint, nearestPoint, { units: 'miles' });
+      
+      // Reject addresses more than 2 miles from Wonder Lake boundary
+      if (distanceToWonderLake > MAX_DISTANCE_MILES) {
+        setError(`This address is outside our service area. Please enter an address within ${MAX_DISTANCE_MILES} miles of Wonder Lake.`);
+        setLoading(false);
+        return;
+      }
       const isInsideWonderLake = booleanPointInPolygon(userPoint, wonderLakePolygon as any);
 
       if (isInsideWonderLake) {
