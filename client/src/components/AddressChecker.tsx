@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import { point } from "@turf/helpers";
-import { rawVillageData, rawZipData } from "@/data/village-data";
+import { rawVillageData } from "@/data/village-data";
 import WonderLakeMap from "@/components/WonderLakeMap";
 
-type ResultStatus = "resident" | "annexation" | "outside" | null;
+type ResultStatus = "resident" | "annexation" | null;
 
 export default function AddressChecker() {
   const [address, setAddress] = useState("");
@@ -28,6 +28,7 @@ export default function AddressChecker() {
     setMarkerPosition(null);
 
     try {
+      // Fetch coordinates from Nominatim API
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`
       );
@@ -48,22 +49,11 @@ export default function AddressChecker() {
       const coords: [number, number] = [parseFloat(lat), parseFloat(lon)];
       const userPoint = point([parseFloat(lon), parseFloat(lat)]);
 
-      const villagePolygon = rawVillageData.features[0];
-      const isInsideVillage = booleanPointInPolygon(userPoint, villagePolygon as any);
+      // Check if point is inside the polygon
+      const polygon = rawVillageData.features[0];
+      const isInside = booleanPointInPolygon(userPoint, polygon as any);
 
-      if (isInsideVillage) {
-        setResult("resident");
-      } else {
-        const zipPolygon = rawZipData.features[0];
-        const isInsideZip = booleanPointInPolygon(userPoint, zipPolygon as any);
-        
-        if (isInsideZip) {
-          setResult("annexation");
-        } else {
-          setResult("outside");
-        }
-      }
-      
+      setResult(isInside ? "resident" : "annexation");
       setMarkerPosition(coords);
     } catch (err) {
       console.error("Error checking address:", err);
@@ -116,10 +106,11 @@ export default function AddressChecker() {
           </Button>
         </div>
 
+        {/* Interactive Map */}
         <div className="mb-8">
           <WonderLakeMap 
             markerPosition={markerPosition} 
-            resultStatus={result}
+            isInside={result === "resident"}
           />
         </div>
 
@@ -131,6 +122,7 @@ export default function AddressChecker() {
 
         {result === "resident" && (
           <div className="p-6 bg-green-100 dark:bg-green-950 border-2 border-green-500 rounded-md text-center" data-testid="result-resident">
+            <div className="text-4xl mb-2">✅</div>
             <h3 className="text-xl font-bold text-green-800 dark:text-green-200 mb-2">
               You are already a Village Resident
             </h3>
@@ -142,22 +134,12 @@ export default function AddressChecker() {
 
         {result === "annexation" && (
           <div className="p-6 bg-yellow-100 dark:bg-yellow-950 border-2 border-yellow-500 rounded-md text-center" data-testid="result-annexation">
+            <div className="text-4xl mb-2">📢</div>
             <h3 className="text-xl font-bold text-yellow-800 dark:text-yellow-200 mb-2">
               You are in the Annexation Zone
             </h3>
             <p className="text-yellow-700 dark:text-yellow-300">
               You are currently unincorporated. See your benefits below.
-            </p>
-          </div>
-        )}
-
-        {result === "outside" && (
-          <div className="p-6 bg-gray-100 dark:bg-gray-900 border-2 border-gray-400 dark:border-gray-600 rounded-md text-center" data-testid="result-outside">
-            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-2">
-              Likely Outside Target Annexation Area
-            </h3>
-            <p className="text-gray-700 dark:text-gray-300">
-              This address appears to be outside the 60097 ZIP code and may already be part of another municipality.
             </p>
           </div>
         )}
