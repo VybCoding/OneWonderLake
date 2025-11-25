@@ -1,25 +1,25 @@
-// Mock GeoJSON polygon for Wonder Lake, IL (approx Lat 42.38, Long -88.35)
-// This is a simple square box covering the Wonder Lake area for testing
-export const rawVillageData = {
-  type: "FeatureCollection",
-  features: [
-    {
-      type: "Feature",
-      properties: {
-        name: "Wonder Lake Mock Village Boundary"
-      },
-      geometry: {
-        type: "Polygon",
-        coordinates: [
-          [
-            [-88.37, 42.36],  // Southwest corner
-            [-88.37, 42.40],  // Northwest corner
-            [-88.33, 42.40],  // Northeast corner
-            [-88.33, 42.36],  // Southeast corner
-            [-88.37, 42.36]   // Close the polygon
-          ]
-        ]
-      }
-    }
-  ]
-} as const;
+// Official Wonder Lake Village Boundary GeoJSON
+// Source: Municipal Boundaries data for Wonder Lake, Illinois
+import boundaryData from './wonder-lake-boundary.geojson';
+
+export const rawVillageData = boundaryData;
+
+// Type for the GeoJSON structure
+export type VillageBoundary = {
+  type: "FeatureCollection";
+  crs: {
+    type: string;
+    properties: {
+      name: string;
+    };
+  };
+  features: Array<{
+    type: "Feature";
+    id: number;
+    geometry: {
+      type: "Polygon";
+      coordinates: number[][][];
+    };
+    properties?: Record<string, any>;
+  }>;
+};
