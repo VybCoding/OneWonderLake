@@ -15,9 +15,12 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
+type ResultStatus = "resident" | "annexation" | "other_municipality" | null;
+
 interface WonderLakeMapProps {
   markerPosition?: [number, number] | null;
-  isInside?: boolean | null;
+  result?: ResultStatus;
+  municipalityName?: string | null;
 }
 
 // Component to handle map view changes
@@ -34,7 +37,16 @@ function MapViewController({ markerPosition }: { markerPosition?: [number, numbe
   return null;
 }
 
-export default function WonderLakeMap({ markerPosition, isInside }: WonderLakeMapProps) {
+// Format municipality name for display (title case)
+const formatMunicipalityName = (name: string) => {
+  return name
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+export default function WonderLakeMap({ markerPosition, result, municipalityName }: WonderLakeMapProps) {
   // Default center: Wonder Lake, IL
   const defaultCenter: [number, number] = [42.38, -88.35];
   const mapRef = useRef<L.Map | null>(null);
@@ -47,6 +59,37 @@ export default function WonderLakeMap({ markerPosition, isInside }: WonderLakeMa
     fillColor: '#94d2bd',
     fillOpacity: 0.2,
   };
+
+  // Get popup content based on result
+  const getPopupContent = () => {
+    switch (result) {
+      case "resident":
+        return {
+          title: "Village Resident",
+          subtitle: "Already part of Wonder Lake Village",
+          icon: "check-circle",
+          color: "text-green-600"
+        };
+      case "other_municipality":
+        return {
+          title: `Part of ${municipalityName ? formatMunicipalityName(municipalityName) : 'Another Municipality'}`,
+          subtitle: "Not eligible for annexation",
+          icon: "building",
+          color: "text-slate-500"
+        };
+      case "annexation":
+        return {
+          title: "Annexation Zone",
+          subtitle: "Eligible for annexation",
+          icon: "megaphone",
+          color: "text-yellow-600"
+        };
+      default:
+        return null;
+    }
+  };
+
+  const popupContent = getPopupContent();
 
   return (
     <div className="w-full h-[400px] md:h-[500px] rounded-md overflow-hidden border-2 border-border shadow-lg" data-testid="map-container">
@@ -73,18 +116,16 @@ export default function WonderLakeMap({ markerPosition, isInside }: WonderLakeMa
         />
         
         {/* Address Marker */}
-        {markerPosition && (
+        {markerPosition && popupContent && (
           <Marker position={markerPosition}>
             <Popup>
               <div className="text-center">
-                <strong>
-                  {isInside ? "✅ Village Resident" : "📢 Annexation Zone"}
+                <strong className={popupContent.color}>
+                  {popupContent.title}
                 </strong>
                 <br />
-                <span className="text-sm text-muted-foreground">
-                  {isInside 
-                    ? "Already part of Wonder Lake Village" 
-                    : "Eligible for annexation"}
+                <span className="text-sm text-gray-600">
+                  {popupContent.subtitle}
                 </span>
               </div>
             </Popup>

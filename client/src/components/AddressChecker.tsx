@@ -5,15 +5,17 @@ import { Input } from "@/components/ui/input";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import { point } from "@turf/helpers";
 import { rawVillageData } from "@/data/village-data";
+import neighboringMunicipalities from "@/data/neighboring-municipalities.json";
 import WonderLakeMap from "@/components/WonderLakeMap";
 import InterestForm from "@/components/InterestForm";
 
-type ResultStatus = "resident" | "annexation" | null;
+type ResultStatus = "resident" | "annexation" | "other_municipality" | null;
 
 export default function AddressChecker() {
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ResultStatus>(null);
+  const [municipalityName, setMunicipalityName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(null);
 
@@ -26,6 +28,7 @@ export default function AddressChecker() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setMunicipalityName(null);
     setMarkerPosition(null);
 
     try {
@@ -50,11 +53,29 @@ export default function AddressChecker() {
       const coords: [number, number] = [parseFloat(lat), parseFloat(lon)];
       const userPoint = point([parseFloat(lon), parseFloat(lat)]);
 
-      // Check if point is inside the polygon
-      const polygon = rawVillageData.features[0];
-      const isInside = booleanPointInPolygon(userPoint, polygon as any);
+      // First, check if point is inside Wonder Lake Village
+      const wonderLakePolygon = rawVillageData.features[0];
+      const isInsideWonderLake = booleanPointInPolygon(userPoint, wonderLakePolygon as any);
 
-      setResult(isInside ? "resident" : "annexation");
+      if (isInsideWonderLake) {
+        setResult("resident");
+        setMarkerPosition(coords);
+        return;
+      }
+
+      // Check if point is inside any neighboring municipality
+      for (const feature of neighboringMunicipalities.features) {
+        const isInsideMunicipality = booleanPointInPolygon(userPoint, feature as any);
+        if (isInsideMunicipality) {
+          setResult("other_municipality");
+          setMunicipalityName(feature.properties.CORPNAME);
+          setMarkerPosition(coords);
+          return;
+        }
+      }
+
+      // Not in Wonder Lake or any other municipality - eligible for annexation
+      setResult("annexation");
       setMarkerPosition(coords);
     } catch (err) {
       console.error("Error checking address:", err);
@@ -68,6 +89,15 @@ export default function AddressChecker() {
     if (e.key === "Enter") {
       checkAddress();
     }
+  };
+
+  // Format municipality name for display (title case)
+  const formatMunicipalityName = (name: string) => {
+    return name
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   };
 
   return (
@@ -111,7 +141,8 @@ export default function AddressChecker() {
         <div className="mb-8">
           <WonderLakeMap 
             markerPosition={markerPosition} 
-            isInside={result === "resident"}
+            result={result}
+            municipalityName={municipalityName}
           />
         </div>
 
@@ -133,9 +164,29 @@ export default function AddressChecker() {
           </div>
         )}
 
+        {result === "other_municipality" && municipalityName && (
+          <div className="p-6 bg-slate-100 dark:bg-slate-900 border-2 border-slate-400 rounded-md text-center" data-testid="result-other-municipality">
+            <div className="text-4xl mb-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-2">
+              Already Part of {formatMunicipalityName(municipalityName)}
+            </h3>
+            <p className="text-slate-600 dark:text-slate-400">
+              This address is within the boundaries of {formatMunicipalityName(municipalityName)} and is not eligible for annexation into Wonder Lake Village.
+            </p>
+          </div>
+        )}
+
         {result === "annexation" && (
           <div className="p-6 bg-yellow-100 dark:bg-yellow-950 border-2 border-yellow-500 rounded-md text-center" data-testid="result-annexation">
-            <div className="text-4xl mb-2">📢</div>
+            <div className="text-4xl mb-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+              </svg>
+            </div>
             <h3 className="text-xl font-bold text-yellow-800 dark:text-yellow-200 mb-2">
               You are in the Annexation Zone
             </h3>
