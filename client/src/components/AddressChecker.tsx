@@ -6,6 +6,7 @@ import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import { point } from "@turf/helpers";
 import { rawVillageData } from "@/data/village-data";
 import WonderLakeMap from "@/components/WonderLakeMap";
+import InterestForm from "@/components/InterestForm";
 
 type ResultStatus = "resident" | "annexation" | null;
 
@@ -138,9 +139,14 @@ export default function AddressChecker() {
             <h3 className="text-xl font-bold text-yellow-800 dark:text-yellow-200 mb-2">
               You are in the Annexation Zone
             </h3>
-            <p className="text-yellow-700 dark:text-yellow-300">
+            <p className="text-yellow-700 dark:text-yellow-300 mb-4">
               You are currently unincorporated. See your benefits below.
             </p>
+            <InterestForm 
+              source="address_checker" 
+              prefillAddress={address}
+              buttonClassName="bg-yellow-700 hover:bg-yellow-800 text-white"
+            />
           </div>
         )}
       </div>

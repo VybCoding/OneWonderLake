@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import InterestForm from "@/components/InterestForm";
 
 interface TaxEstimate {
   currentTax: number;
@@ -360,18 +361,24 @@ export default function TaxEstimator({ initialEav = "", initialTax = "" }: TaxEs
               </div>
             </div>
 
-            <div className="text-center">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  estimateMutation.reset();
-                  setEav("");
-                  setCurrentTax("");
-                }}
-                data-testid="button-reset"
-              >
-                Calculate for Another Property
-              </Button>
+            <div className="text-center space-y-4">
+              <InterestForm 
+                source="tax_estimator"
+                buttonSize="lg"
+              />
+              <div>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    estimateMutation.reset();
+                    setEav("");
+                    setCurrentTax("");
+                  }}
+                  data-testid="button-reset"
+                >
+                  Calculate for Another Property
+                </Button>
+              </div>
             </div>
           </div>
         )}

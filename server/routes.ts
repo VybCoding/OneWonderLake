@@ -1,6 +1,8 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { setupAuth, isAuthenticated } from "./replitAuth";
+import { insertInterestedPartySchema } from "@shared/schema";
 
 interface TaxEstimate {
   currentTax: number;
@@ -37,6 +39,22 @@ function calculatePostAnnexationTax(eav: number, currentTax: number): TaxEstimat
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup Replit Auth
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Tax estimation routes
   app.post("/api/tax/estimate", async (req: Request, res: Response) => {
     try {
       const { eav, currentTax } = req.body;
@@ -72,6 +90,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "Look up your EAV and current taxes on the McHenry County Property Tax Inquiry portal"
       ]
     });
+  });
+
+  // Interested parties routes (public submission)
+  app.post("/api/interested", async (req: Request, res: Response) => {
+    try {
+      const validationResult = insertInterestedPartySchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid data provided",
+          details: validationResult.error.errors 
+        });
+      }
+
+      const data = validationResult.data;
+
+      // Check if email already exists
+      const existing = await storage.getInterestedPartyByEmail(data.email);
+      if (existing) {
+        return res.status(409).json({ 
+          error: "This email address has already been registered",
+          message: "Thank you! You're already on our list." 
+        });
+      }
+
+      const party = await storage.createInterestedParty(data);
+
+      // NOTE: Email sending is not configured. 
+      // To enable thank-you emails, set up Resend or another email service integration.
+      // See replit.md for configuration instructions.
+
+      res.status(201).json({ 
+        success: true,
+        message: "Thank you for your interest! We'll be in touch soon.",
+        id: party.id 
+      });
+    } catch (error) {
+      console.error("Error creating interested party:", error);
+      res.status(500).json({ error: "Failed to register your interest. Please try again." });
+    }
+  });
+
+  // Admin routes (protected - requires authentication)
+  app.get("/api/admin/interested", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const parties = await storage.getInterestedParties();
+      res.json(parties);
+    } catch (error) {
+      console.error("Error fetching interested parties:", error);
+      res.status(500).json({ error: "Failed to fetch interested parties" });
+    }
+  });
+
+  // Check if current user is admin
+  app.get("/api/admin/check", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json({ isAdmin: user?.isAdmin ?? false });
+    } catch (error) {
+      console.error("Error checking admin status:", error);
+      res.status(500).json({ error: "Failed to check admin status" });
+    }
   });
 
   const httpServer = createServer(app);
