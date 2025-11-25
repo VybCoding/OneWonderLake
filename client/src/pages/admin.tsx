@@ -20,7 +20,8 @@ import {
   X,
   Download,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  RotateCcw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -48,6 +49,7 @@ export default function AdminPage() {
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
   const [selectedParty, setSelectedParty] = useState<InterestedParty | null>(null);
+  const [interestFilter, setInterestFilter] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -284,7 +286,11 @@ export default function AdminPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-          <Card>
+          <Card 
+            className={`cursor-pointer transition-all hover-elevate ${interestFilter === true ? 'ring-2 ring-green-600 ring-offset-2' : ''}`}
+            onClick={() => setInterestFilter(interestFilter === true ? null : true)}
+            data-testid="card-filter-interested"
+          >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Interested</CardTitle>
             </CardHeader>
@@ -298,7 +304,11 @@ export default function AdminPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card 
+            className={`cursor-pointer transition-all hover-elevate ${interestFilter === false ? 'ring-2 ring-red-600 ring-offset-2' : ''}`}
+            onClick={() => setInterestFilter(interestFilter === false ? null : false)}
+            data-testid="card-filter-disinterested"
+          >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Not Interested</CardTitle>
             </CardHeader>
@@ -360,7 +370,13 @@ export default function AdminPage() {
           <TabsList className="mb-4">
             <TabsTrigger value="responses" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
-              Responses ({interestedParties?.length || 0})
+              Responses ({
+                interestFilter === null 
+                  ? interestedParties?.length || 0
+                  : interestFilter === true
+                    ? interestedParties?.filter(p => p.interested !== false).length || 0
+                    : interestedParties?.filter(p => p.interested === false).length || 0
+              })
             </TabsTrigger>
             <TabsTrigger value="searches" className="flex items-center gap-2">
               <Search className="w-4 h-4" />
@@ -376,21 +392,52 @@ export default function AdminPage() {
                     <CardTitle className="flex items-center gap-2">
                       <Users className="w-5 h-5" />
                       Resident Responses
+                      {interestFilter !== null && (
+                        <Badge 
+                          variant={interestFilter ? "default" : "destructive"} 
+                          className={`ml-2 ${interestFilter ? 'bg-green-600' : ''}`}
+                        >
+                          {interestFilter ? (
+                            <><ThumbsUp className="w-3 h-3 mr-1" /> Interested Only</>
+                          ) : (
+                            <><ThumbsDown className="w-3 h-3 mr-1" /> Not Interested Only</>
+                          )}
+                        </Badge>
+                      )}
                     </CardTitle>
                     <CardDescription>
-                      All residents who have shared their stance on annexation
+                      {interestFilter === null 
+                        ? "All residents who have shared their stance on annexation"
+                        : interestFilter 
+                          ? "Showing only residents interested in annexation"
+                          : "Showing only residents not interested in annexation"
+                      }
                     </CardDescription>
                   </div>
-                  <Button 
-                    onClick={exportToCSV}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2"
-                    data-testid="button-export-csv"
-                  >
-                    <Download className="w-4 h-4" />
-                    Export to CSV
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {interestFilter !== null && (
+                      <Button 
+                        onClick={() => setInterestFilter(null)}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2"
+                        data-testid="button-reset-filter"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        Reset Filter
+                      </Button>
+                    )}
+                    <Button 
+                      onClick={exportToCSV}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                      data-testid="button-export-csv"
+                    >
+                      <Download className="w-4 h-4" />
+                      Export to CSV
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -428,7 +475,13 @@ export default function AdminPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {interestedParties.map((party) => (
+                        {interestedParties
+                          .filter(p => {
+                            if (interestFilter === null) return true;
+                            if (interestFilter === true) return p.interested !== false;
+                            return p.interested === false;
+                          })
+                          .map((party) => (
                           <TableRow 
                             key={party.id} 
                             data-testid={`row-party-${party.id}`}
