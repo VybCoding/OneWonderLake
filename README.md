@@ -15,8 +15,15 @@ Unite currently unincorporated neighborhoods—specifically "doughnut hole" isla
 - **Address Eligibility Checker**: Users enter their address to see if they're inside or outside village boundaries
 - **Interactive Map**: Real-time Leaflet + OpenStreetMap display showing:
   - Official village boundary (GeoJSON-based)
-  - Address location markers with zoom
+  - Address location markers with zoom-to-marker functionality
+  - Map locked at optimal zoom level (scroll-wheel zoom, double-click zoom, touch zoom, and dragging disabled)
   - Visual result indicators (green = resident, yellow = annexation zone)
+- **Property Tax Estimator**: Dedicated calculator page featuring:
+  - Equalized Assessed Value (EAV) input field
+  - Current annual tax bill entry
+  - Post-annexation tax calculation using Village levy rate ($0.2847 per $100 EAV)
+  - Step-by-step guide to finding property info on McHenry County portal
+  - Detailed breakdown showing Village levy amount, percentage increase, and monthly impact
 - **Precise Geospatial Detection**: Uses official municipal boundary polygon (not mock data)
 - **Responsive Civic Design**: Professional governmental aesthetic, mobile-friendly
 - **Comprehensive FAQ (11 Items)**: Myth-busting answers addressing resident concerns:
@@ -65,7 +72,8 @@ The app starts on `http://localhost:5000` with both backend (Express) and fronte
 client/src/
 ├── components/
 │   ├── AddressChecker.tsx      ← Main tool with map integration
-│   ├── WonderLakeMap.tsx       ← Interactive Leaflet map
+│   ├── WonderLakeMap.tsx       ← Interactive Leaflet map (locked zoom)
+│   ├── TaxEstimator.tsx        ← Post-annexation tax calculator
 │   ├── FAQ.tsx                 ← 11-item persuasive FAQ
 │   ├── Hero.tsx                ← Campaign hero section
 │   ├── BenefitsGrid.tsx        ← Three pillar cards
@@ -75,7 +83,8 @@ client/src/
 │   ├── village-data.ts         ← Exports official boundary GeoJSON
 │   └── wonder-lake-boundary.json ← Official municipal boundary
 └── pages/
-    └── home.tsx
+    ├── home.tsx                ← Main landing page (Mission, Benefits, Address Check, FAQ, Vision)
+    └── tax-estimator.tsx       ← Dedicated tax calculator page
 ```
 
 ### Data Flow
@@ -106,12 +115,13 @@ See `design_guidelines.md` for complete specifications.
 
 ### Phase 4: Legal & Outreach Tools
 - [ ] Pre-Annexation Agreement templates (downloadable)
-- [ ] "Visualizing the Wallet" tax comparison calculator
+- [ ] Advanced "Visualizing the Wallet" comparisons per subdivision
 - [ ] Email campaign integration
 
 ### Phase 5: Advanced Intelligence
 - [ ] Property Title Integration
 - [ ] Public Meeting Scheduler
+- [ ] Resident testimonial video gallery
 
 ## 💾 Storage
 
@@ -136,6 +146,22 @@ Try these Wonder Lake, IL addresses to test:
 For questions about the campaign or technical implementation, refer to the project documentation or contact the development team.
 
 ---
+
+## 📝 Navigation Structure
+
+The website now uses two distinct page types:
+
+### Single-Page Sections (Home Route `/`)
+- **Mission**: Campaign core messaging
+- **Benefits**: Three-pillar benefit cards (Tax, Control, Safety)
+- **Address Check**: Interactive address eligibility checker with live map
+- **FAQ**: 11-item myth-busting accordion
+- All scroll-to-section navigation via navbar
+
+### Dedicated Pages
+- **Tax Estimator** (`/tax-estimator`): Full-page property tax calculation tool with comprehensive breakdown
+
+Navigation automatically adjusts: scroll links work on home page, page links navigate to dedicated pages.
 
 **Last Updated**: November 25, 2024  
 **Status**: Production Ready ✅
