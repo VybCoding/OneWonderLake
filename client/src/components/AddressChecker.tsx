@@ -235,6 +235,65 @@ async function saveSearchedAddress(
   }
 }
 
+// Type for address suggestions
+type AddressSuggestion = {
+  displayName: string;
+  lat: string;
+  lon: string;
+  distanceToWonderLake: number;
+};
+
+// Collect all nearby address candidates from search results
+async function collectNearbyCandidates(variations: string[]): Promise<AddressSuggestion[]> {
+  const candidates: AddressSuggestion[] = [];
+  const seenLocations = new Set<string>();
+  
+  const wonderLakePolygon = rawVillageData.features[0];
+  const boundaryLine = polygonToLine(wonderLakePolygon as any);
+  
+  for (const variation of variations) {
+    try {
+      const data = await searchNominatim(variation);
+      if (data && data.length > 0) {
+        for (const result of data) {
+          const lat = parseFloat(result.lat);
+          const lon = parseFloat(result.lon);
+          const locationKey = `${lat.toFixed(5)},${lon.toFixed(5)}`;
+          
+          // Skip duplicates
+          if (seenLocations.has(locationKey)) continue;
+          seenLocations.add(locationKey);
+          
+          const userPoint = point([lon, lat]);
+          const nearestPoint = nearestPointOnLine(boundaryLine as any, userPoint);
+          const dist = distance(userPoint, nearestPoint, { units: 'miles' });
+          
+          // Only include results within 2 miles of Wonder Lake
+          if (dist <= MAX_DISTANCE_MILES) {
+            candidates.push({
+              displayName: result.display_name,
+              lat: result.lat,
+              lon: result.lon,
+              distanceToWonderLake: dist,
+            });
+          }
+        }
+      }
+    } catch (err) {
+      // Continue to next variation
+    }
+    
+    // Small delay between requests
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
+  // Sort by distance to Wonder Lake (closest first)
+  candidates.sort((a, b) => a.distanceToWonderLake - b.distanceToWonderLake);
+  
+  // Return top 5 unique candidates
+  return candidates.slice(0, 5);
+}
+
 export default function AddressChecker() {
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
@@ -242,6 +301,62 @@ export default function AddressChecker() {
   const [municipalityName, setMunicipalityName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(null);
+  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
+
+  // Process a specific location (used for both initial search and suggestion selection)
+  const processLocation = async (lat: string, lon: string, displayAddress: string) => {
+    const coords: [number, number] = [parseFloat(lat), parseFloat(lon)];
+    const userPoint = point([parseFloat(lon), parseFloat(lat)]);
+
+    const wonderLakePolygon = rawVillageData.features[0];
+    const isInsideWonderLake = booleanPointInPolygon(userPoint, wonderLakePolygon as any);
+
+    if (isInsideWonderLake) {
+      setResult("resident");
+      setMarkerPosition(coords);
+      saveSearchedAddress(displayAddress, "resident", undefined, lat, lon);
+      return;
+    }
+
+    // Check if point is inside any neighboring municipality
+    for (const feature of neighboringMunicipalities.features) {
+      const isInsideMunicipality = booleanPointInPolygon(userPoint, feature as any);
+      if (isInsideMunicipality) {
+        setResult("other_municipality");
+        setMunicipalityName(feature.properties.CORPNAME);
+        setMarkerPosition(coords);
+        saveSearchedAddress(displayAddress, "other_municipality", feature.properties.CORPNAME, lat, lon);
+        return;
+      }
+    }
+
+    // Not in Wonder Lake or any other municipality - eligible for annexation
+    setResult("annexation");
+    setMarkerPosition(coords);
+    saveSearchedAddress(displayAddress, "annexation", undefined, lat, lon);
+  };
+
+  // Handle selecting a suggested address
+  const handleSelectSuggestion = async (suggestion: AddressSuggestion) => {
+    setLoading(true);
+    setError(null);
+    setSuggestions([]);
+    setResult(null);
+    setMunicipalityName(null);
+    
+    // Extract just the street address part (first part before the first comma)
+    const streetAddress = suggestion.displayName.split(',')[0].trim();
+    setAddress(streetAddress);
+    
+    try {
+      await processLocation(suggestion.lat, suggestion.lon, streetAddress);
+    } catch (err) {
+      console.error("Error processing suggestion:", err);
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const checkAddress = async () => {
     if (!address.trim()) {
@@ -254,19 +369,23 @@ export default function AddressChecker() {
     setResult(null);
     setMunicipalityName(null);
     setMarkerPosition(null);
+    setSuggestions([]);
 
     try {
       // Generate address variations to try
       const variations = generateAddressVariations(address);
       let foundResult: any = null;
+      let allResults: any[] = [];
       
       // Try each variation until we find a result
       for (const variation of variations) {
         try {
           const data = await searchNominatim(variation);
           if (data && data.length > 0) {
-            foundResult = data[0];
-            break;
+            allResults = allResults.concat(data);
+            if (!foundResult) {
+              foundResult = data[0];
+            }
           }
         } catch (err) {
           // Continue to next variation
@@ -278,7 +397,14 @@ export default function AddressChecker() {
       }
 
       if (!foundResult) {
-        setError("Address not found. Try including 'Wonder Lake, IL' or check the spelling of street names.");
+        // No results at all - try to find nearby candidates
+        const nearbyCandidates = await collectNearbyCandidates(variations);
+        if (nearbyCandidates.length > 0) {
+          setSuggestions(nearbyCandidates);
+          setError("Address not found. Did you mean one of these?");
+        } else {
+          setError("Address not found. Try including 'Wonder Lake, IL' or check the spelling of street names.");
+        }
         saveSearchedAddress(address, "not_found");
         setLoading(false);
         return;
@@ -296,38 +422,23 @@ export default function AddressChecker() {
       const nearestPoint = nearestPointOnLine(boundaryLine as any, userPoint);
       const distanceToWonderLake = distance(userPoint, nearestPoint, { units: 'miles' });
       
-      // Reject addresses more than 2 miles from Wonder Lake boundary
+      // If address is outside service area, look for nearby alternatives
       if (distanceToWonderLake > MAX_DISTANCE_MILES) {
-        setError(`This address is outside our service area. Please enter an address within ${MAX_DISTANCE_MILES} miles of Wonder Lake.`);
+        // Collect candidates from all results that ARE within the service area
+        const nearbyCandidates = await collectNearbyCandidates(variations);
+        
+        if (nearbyCandidates.length > 0) {
+          setSuggestions(nearbyCandidates);
+          setError("The address found is outside our service area. Did you mean one of these Wonder Lake addresses?");
+        } else {
+          setError(`This address is outside our service area. Please enter an address within ${MAX_DISTANCE_MILES} miles of Wonder Lake.`);
+        }
         saveSearchedAddress(address, "outside_area", undefined, lat, lon);
         setLoading(false);
         return;
       }
-      const isInsideWonderLake = booleanPointInPolygon(userPoint, wonderLakePolygon as any);
-
-      if (isInsideWonderLake) {
-        setResult("resident");
-        setMarkerPosition(coords);
-        saveSearchedAddress(address, "resident", undefined, lat, lon);
-        return;
-      }
-
-      // Check if point is inside any neighboring municipality
-      for (const feature of neighboringMunicipalities.features) {
-        const isInsideMunicipality = booleanPointInPolygon(userPoint, feature as any);
-        if (isInsideMunicipality) {
-          setResult("other_municipality");
-          setMunicipalityName(feature.properties.CORPNAME);
-          setMarkerPosition(coords);
-          saveSearchedAddress(address, "other_municipality", feature.properties.CORPNAME, lat, lon);
-          return;
-        }
-      }
-
-      // Not in Wonder Lake or any other municipality - eligible for annexation
-      setResult("annexation");
-      setMarkerPosition(coords);
-      saveSearchedAddress(address, "annexation", undefined, lat, lon);
+      // Address is within service area - process it
+      await processLocation(lat, lon, address);
     } catch (err) {
       console.error("Error checking address:", err);
       setError("Something went wrong. Please try again.");
@@ -400,6 +511,37 @@ export default function AddressChecker() {
         {error && (
           <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-center" data-testid="text-error">
             {error}
+          </div>
+        )}
+
+        {/* Did you mean? Suggestions */}
+        {suggestions.length > 0 && (
+          <div className="mt-4 p-4 bg-card border border-border rounded-md" data-testid="suggestions-container">
+            <p className="text-sm font-medium text-muted-foreground mb-3">Select an address:</p>
+            <div className="space-y-2">
+              {suggestions.map((suggestion, index) => {
+                // Format display: show street address prominently, then city/state smaller
+                const parts = suggestion.displayName.split(',');
+                const streetAddress = parts[0]?.trim() || suggestion.displayName;
+                const cityState = parts.slice(1, 3).join(',').trim();
+                
+                return (
+                  <button
+                    key={index}
+                    onClick={() => handleSelectSuggestion(suggestion)}
+                    className="w-full text-left p-3 rounded-md border border-border bg-background hover-elevate active-elevate-2 transition-colors"
+                    data-testid={`suggestion-${index}`}
+                  >
+                    <span className="font-medium text-foreground">{streetAddress}</span>
+                    {cityState && (
+                      <span className="text-sm text-muted-foreground ml-2">
+                        {cityState}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 
