@@ -31,7 +31,7 @@ export const users = pgTable("users", {
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
-// Interested parties - residents who want to be annexed
+// Interested parties - residents who express interest or disinterest in annexation
 export const interestedParties = pgTable("interested_parties", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name").notNull(),
@@ -40,6 +40,7 @@ export const interestedParties = pgTable("interested_parties", {
   phone: varchar("phone"),
   notes: text("notes"),
   source: varchar("source").notNull(), // 'address_checker' or 'tax_estimator'
+  interested: boolean("interested").notNull().default(true), // true = interested in annexation, false = not interested
   emailSent: boolean("email_sent").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -58,6 +59,7 @@ export const insertInterestedPartySchema = createInsertSchema(interestedParties)
     required_error: "Source is required",
     invalid_type_error: "Invalid source" 
   }),
+  interested: z.boolean().default(true),
 });
 
 export type InsertInterestedParty = z.infer<typeof insertInterestedPartySchema>;

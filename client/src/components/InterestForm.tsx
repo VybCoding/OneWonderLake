@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Heart, CheckCircle, AlertCircle } from "lucide-react";
+import { ThumbsUp, ThumbsDown, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,6 +40,7 @@ interface InterestFormProps {
   buttonVariant?: "default" | "outline" | "ghost";
   buttonSize?: "default" | "sm" | "lg";
   buttonClassName?: string;
+  interested?: boolean; // true = interested in annexation, false = not interested
 }
 
 export default function InterestForm({
@@ -48,6 +49,7 @@ export default function InterestForm({
   buttonVariant = "default",
   buttonSize = "default",
   buttonClassName = "",
+  interested = true,
 }: InterestFormProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "duplicate" | "ratelimit" | "error">("idle");
@@ -74,6 +76,7 @@ export default function InterestForm({
       const response = await apiRequest("POST", "/api/interested", {
         ...data,
         source,
+        interested,
       });
       return response.json();
     },
@@ -103,6 +106,13 @@ export default function InterestForm({
     mutation.reset();
   };
 
+  const buttonLabel = interested ? "I'm Interested in Annexation" : "I'm NOT Interested in Annexation";
+  const buttonIcon = interested ? <ThumbsUp className="w-4 h-4 mr-2" /> : <ThumbsDown className="w-4 h-4 mr-2" />;
+  const dialogTitle = interested ? "Express Your Interest" : "Express Your Disinterest";
+  const dialogDescription = interested 
+    ? "Join our list of residents interested in voluntary annexation into the Village of Wonder Lake."
+    : "Help us understand concerns about annexation. Your feedback is valuable to our community.";
+
   return (
     <>
       <Button
@@ -110,18 +120,18 @@ export default function InterestForm({
         size={buttonSize}
         className={buttonClassName}
         onClick={() => setIsOpen(true)}
-        data-testid="button-express-interest"
+        data-testid={interested ? "button-express-interest" : "button-express-disinterest"}
       >
-        <Heart className="w-4 h-4 mr-2" />
-        I'm Interested in Annexation
+        {buttonIcon}
+        {buttonLabel}
       </Button>
 
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl text-foreground">Express Your Interest</DialogTitle>
+            <DialogTitle className="text-xl text-foreground">{dialogTitle}</DialogTitle>
             <DialogDescription>
-              Join our list of residents interested in voluntary annexation into the Village of Wonder Lake.
+              {dialogDescription}
             </DialogDescription>
           </DialogHeader>
 
@@ -130,7 +140,10 @@ export default function InterestForm({
               <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-foreground mb-2">Thank You!</h3>
               <p className="text-muted-foreground mb-4">
-                We've received your interest. A campaign representative will be in touch soon to discuss next steps.
+                {interested 
+                  ? "We've received your interest. A campaign representative will be in touch soon to discuss next steps."
+                  : "We've recorded your feedback. Your voice matters in this important community discussion."
+                }
               </p>
               <Button onClick={handleClose} data-testid="button-close-success">
                 Close

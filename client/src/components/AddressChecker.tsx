@@ -624,11 +624,20 @@ export default function AddressChecker() {
             <p className="text-yellow-700 dark:text-yellow-300 mb-4">
               You are currently unincorporated. See your benefits below.
             </p>
-            <InterestForm 
-              source="address_checker" 
-              prefillAddress={address}
-              buttonClassName="bg-yellow-700 hover:bg-yellow-800 text-white"
-            />
+            <div className="flex gap-3 justify-center flex-wrap" data-testid="interest-buttons-container">
+              <InterestForm 
+                source="address_checker" 
+                prefillAddress={address}
+                interested={true}
+                buttonClassName="bg-yellow-700 hover:bg-yellow-800 text-white"
+              />
+              <InterestForm 
+                source="address_checker" 
+                prefillAddress={address}
+                interested={false}
+                buttonClassName="bg-gray-600 hover:bg-gray-700 text-white"
+              />
+            </div>
           </div>
         )}
       </div>
