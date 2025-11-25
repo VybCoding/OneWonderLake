@@ -1,6 +1,6 @@
 // Official Wonder Lake Village Boundary GeoJSON
 // Source: Municipal Boundaries data for Wonder Lake, Illinois
-import boundaryData from './wonder-lake-boundary.geojson';
+import boundaryData from './wonder-lake-boundary.json';
 
 export const rawVillageData = boundaryData;
 
