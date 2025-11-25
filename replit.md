@@ -19,7 +19,11 @@ The platform features a responsive civic design with a professional governmental
 - **Interactive Map**: Displays official village boundaries (GeoJSON) and address markers.
 - **Property Tax Estimator**: A dedicated page (`/tax-estimator`) that calculates post-annexation taxes based on Equalized Assessed Value (EAV) and current tax bills, providing a detailed breakdown and a lookup guide for McHenry County property data.
 - **Interest Tracking System**: Residents can express interest via forms in the Address Checker and Tax Estimator. Submissions are stored in a PostgreSQL database with source tracking.
-- **Admin Dashboard**: A protected `/admin` panel using Replit Auth (OIDC) for campaign organizers to view interested parties, statistics, and submission sources.
+- **Address Search Analytics**: All address lookups are tracked in the database regardless of whether users submit the interest form. Each search records the address, result type (resident, annexation, other_municipality, outside_area, not_found), municipality name if applicable, and timestamp. This provides campaign analytics on community engagement.
+- **Admin Dashboard**: A protected `/admin` panel using Replit Auth (OIDC) for campaign organizers. Features a tabbed interface with:
+  - **Interested Parties tab**: View residents who submitted interest forms with contact details and submission source
+  - **Address Searches tab**: View all address lookups with result type badges and timestamps for campaign analytics
+  - **Statistics cards**: Total interested parties, total address searches, and breakdowns by source
 - **Campaign Arguments**: Presented as six clickable pillars on the homepage, each with in-depth content in a dialog: "Bring State Tax Dollars Home," "Gain a Voice (Representation)," "Define Our Future (Self-Determination)," "Establish Local Control & Protect Rights," "Improve Safety & Services," and "Golf Cart Freedom."
 
 ### Feature Specifications
