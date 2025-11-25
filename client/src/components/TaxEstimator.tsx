@@ -367,7 +367,7 @@ export default function TaxEstimator({ initialEav = "", initialTax = "" }: TaxEs
                   source="tax_estimator"
                   interested={true}
                   buttonSize="lg"
-                  buttonClassName="bg-green-600 hover:bg-green-700 text-white"
+                  buttonClassName="bg-yellow-700 hover:bg-yellow-800 text-white"
                 />
                 <InterestForm 
                   source="tax_estimator"
