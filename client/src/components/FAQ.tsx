@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import QuestionForm from "./QuestionForm";
+import FundRevenueCalculator from "./FundRevenueCalculator";
 import type { DynamicFaq } from "@shared/schema";
 
 interface StaticFaq {
@@ -79,8 +80,9 @@ const staticFaqs: StaticFaq[] = [
   {
     question: "Is this LGDF money actually significant?",
     answer:
-      "Yes. LGDF funds are distributed based on population. For every resident annexed, Wonder Lake receives additional annual funding for village improvements—without touching property taxes. It compounds: more residents means a larger share, which funds better services, making our community more attractive, leading to continued growth.",
+      "Yes. LGDF funds are distributed based on population at $178 per resident per year. Additionally, Motor Fuel Tax (MFT) provides $22.50 per resident per year for transportation infrastructure. For every resident annexed, Wonder Lake receives additional annual funding for village improvements—without touching property taxes. It compounds: more residents means a larger share, which funds better services, making our community more attractive, leading to continued growth. Try the interactive calculator below to see how the revenue grows with population.",
     category: "taxes",
+    hasCalculator: true,
   },
   {
     question: "What happens to current village residents?",
