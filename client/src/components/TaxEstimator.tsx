@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Calculator, TrendingUp, DollarSign, AlertCircle, ChevronDown, ChevronUp, Info, ExternalLink, HelpCircle, FileText } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Calculator, TrendingUp, DollarSign, AlertCircle, ChevronDown, ChevronUp, Info, ExternalLink, HelpCircle, FileText, Loader2, ChevronsDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -64,6 +64,12 @@ export default function TaxEstimator({ initialEav = "", initialTax = "" }: TaxEs
   const [currentTax, setCurrentTax] = useState(initialTax);
   const [showDetails, setShowDetails] = useState(false);
   const [showLookupGuide, setShowLookupGuide] = useState(true);
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(false);
+  const [hasScrolledResults, setHasScrolledResults] = useState(false);
+  
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (initialEav) setEav(initialEav);
@@ -99,10 +105,50 @@ export default function TaxEstimator({ initialEav = "", initialTax = "" }: TaxEs
       return;
     }
 
+    setIsCalculating(true);
+    setHasScrolledResults(false);
+    
     const data = { eav: eavNum, currentTax: taxNum };
-    estimateMutation.mutate(data);
-    breakdownMutation.mutate(data);
+    
+    Promise.all([
+      estimateMutation.mutateAsync(data),
+      breakdownMutation.mutateAsync(data)
+    ]).then(() => {
+      setIsCalculating(false);
+    }).catch(() => {
+      setIsCalculating(false);
+    });
   };
+
+  useEffect(() => {
+    if (estimateMutation.data && breakdownMutation.data && !hasScrolledResults) {
+      setHasScrolledResults(true);
+      
+      setTimeout(() => {
+        if (sectionRef.current) {
+          const headerOffset = 80;
+          const elementPosition = sectionRef.current.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+          
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: "smooth"
+          });
+        }
+        
+        setTimeout(() => {
+          const windowHeight = window.innerHeight;
+          const documentHeight = document.documentElement.scrollHeight;
+          const scrollPosition = window.pageYOffset + windowHeight;
+          
+          if (scrollPosition < documentHeight - 100) {
+            setShowScrollIndicator(true);
+            setTimeout(() => setShowScrollIndicator(false), 3000);
+          }
+        }, 600);
+      }, 100);
+    }
+  }, [estimateMutation.data, breakdownMutation.data, hasScrolledResults]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -133,20 +179,50 @@ export default function TaxEstimator({ initialEav = "", initialTax = "" }: TaxEs
     return !isNaN(eavNum) && eavNum > 0 && !isNaN(taxNum) && taxNum >= 0;
   };
 
+  const hasResults = estimateMutation.data && breakdownMutation.data;
+  const showInputForm = !hasResults && !isCalculating;
+
   return (
-    <section id="tax-estimator" className="py-16 md:py-24 bg-accent/10">
+    <section id="tax-estimator" ref={sectionRef} className="py-16 md:py-24 bg-accent/10">
       <div className="max-w-4xl mx-auto px-6 lg:px-8">
         <div className="text-center mb-8">
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground" data-testid="text-estimator-title">
             Property Tax Estimator
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Calculate your estimated post-annexation property tax bill with the 
-            Village of Wonder Lake levy included.
+            {hasResults 
+              ? "Here's your estimated post-annexation property tax breakdown."
+              : "Calculate your estimated post-annexation property tax bill with the Village of Wonder Lake levy included."
+            }
           </p>
         </div>
 
-        <Card className="mb-6">
+        {isCalculating && (
+          <Card className="mb-6" data-testid="card-loading">
+            <CardContent className="py-16">
+              <div className="flex flex-col items-center justify-center space-y-6">
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                  <Calculator className="w-8 h-8 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                </div>
+                <div className="text-center space-y-2">
+                  <h3 className="text-xl font-semibold text-foreground">Calculating Your Tax Estimates</h3>
+                  <p className="text-muted-foreground">
+                    Please wait while we analyze your property tax breakdown...
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {showInputForm && (
+          <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calculator className="w-5 h-5" />
@@ -253,6 +329,7 @@ export default function TaxEstimator({ initialEav = "", initialTax = "" }: TaxEs
             )}
           </CardContent>
         </Card>
+        )}
 
         {estimateMutation.data && (
           <div className="space-y-6">
@@ -422,6 +499,17 @@ export default function TaxEstimator({ initialEav = "", initialTax = "" }: TaxEs
                     breakdownMutation.reset();
                     setEav("");
                     setCurrentTax("");
+                    setShowLookupGuide(true);
+                    setHasScrolledResults(false);
+                    if (sectionRef.current) {
+                      const headerOffset = 80;
+                      const elementPosition = sectionRef.current.getBoundingClientRect().top;
+                      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                      window.scrollTo({
+                        top: offsetPosition,
+                        behavior: "smooth"
+                      });
+                    }
                   }}
                   data-testid="button-reset"
                 >
@@ -432,7 +520,20 @@ export default function TaxEstimator({ initialEav = "", initialTax = "" }: TaxEs
           </div>
         )}
 
-        {!estimateMutation.data && !estimateMutation.isPending && showLookupGuide && (
+        {showScrollIndicator && (
+          <div 
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-bounce"
+            data-testid="scroll-indicator"
+          >
+            <div className="bg-primary/90 text-primary-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+              <ChevronsDown className="w-4 h-4" />
+              <span className="text-sm font-medium">Scroll for more</span>
+              <ChevronsDown className="w-4 h-4" />
+            </div>
+          </div>
+        )}
+
+        {showInputForm && showLookupGuide && (
           <Card className="mt-8" data-testid="card-lookup-guide">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between gap-2">
