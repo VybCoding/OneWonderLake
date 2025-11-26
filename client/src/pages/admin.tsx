@@ -1277,7 +1277,7 @@ export default function AdminPage() {
                     <SelectTrigger data-testid="select-edit-category">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent side="bottom">
                       {Object.entries(categoryLabels).map(([value, label]) => (
                         <SelectItem key={value} value={value}>
                           {label}
@@ -1346,7 +1346,7 @@ export default function AdminPage() {
                 <SelectTrigger data-testid="select-new-faq-category">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent side="bottom">
                   {Object.entries(categoryLabels).map(([value, label]) => (
                     <SelectItem key={value} value={value}>
                       {label}
