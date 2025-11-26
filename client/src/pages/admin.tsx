@@ -449,7 +449,10 @@ export default function AdminPage() {
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
           <Card 
             className={`cursor-pointer transition-all hover-elevate ${interestFilter === true ? 'ring-2 ring-green-600 ring-offset-2' : ''}`}
-            onClick={() => setInterestFilter(interestFilter === true ? null : true)}
+            onClick={() => {
+              setInterestFilter(interestFilter === true ? null : true);
+              setActiveTab("responses");
+            }}
             data-testid="card-filter-interested"
           >
             <CardHeader className="pb-2">
@@ -467,7 +470,10 @@ export default function AdminPage() {
 
           <Card 
             className={`cursor-pointer transition-all hover-elevate ${interestFilter === false ? 'ring-2 ring-red-600 ring-offset-2' : ''}`}
-            onClick={() => setInterestFilter(interestFilter === false ? null : false)}
+            onClick={() => {
+              setInterestFilter(interestFilter === false ? null : false);
+              setActiveTab("responses");
+            }}
             data-testid="card-filter-disinterested"
           >
             <CardHeader className="pb-2">
@@ -501,7 +507,11 @@ export default function AdminPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card
+            className="cursor-pointer transition-all hover-elevate"
+            onClick={() => setActiveTab("faqs")}
+            data-testid="card-published-faqs"
+          >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Published FAQs</CardTitle>
             </CardHeader>
@@ -515,7 +525,11 @@ export default function AdminPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card
+            className="cursor-pointer transition-all hover-elevate"
+            onClick={() => setActiveTab("searches")}
+            data-testid="card-address-searches"
+          >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Address Searches</CardTitle>
             </CardHeader>
