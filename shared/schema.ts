@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, index, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, index, jsonb, boolean, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -83,3 +83,71 @@ export const insertSearchedAddressSchema = createInsertSchema(searchedAddresses)
 
 export type InsertSearchedAddress = z.infer<typeof insertSearchedAddressSchema>;
 export type SearchedAddress = typeof searchedAddresses.$inferSelect;
+
+// Question categories enum
+export const questionCategories = ["general", "taxes", "property_rights", "services"] as const;
+export type QuestionCategory = typeof questionCategories[number];
+
+// Question status enum
+export const questionStatuses = ["pending", "answered", "published"] as const;
+export type QuestionStatus = typeof questionStatuses[number];
+
+// Community questions - questions submitted by residents
+export const communityQuestions = pgTable("community_questions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  question: text("question").notNull(),
+  name: varchar("name").notNull(),
+  email: varchar("email").notNull(),
+  address: varchar("address"),
+  phone: varchar("phone"),
+  category: varchar("category").notNull().default("general"),
+  status: varchar("status").notNull().default("pending"),
+  answer: text("answer"),
+  createdAt: timestamp("created_at").defaultNow(),
+  answeredAt: timestamp("answered_at"),
+});
+
+export const insertCommunityQuestionSchema = createInsertSchema(communityQuestions).omit({
+  id: true,
+  status: true,
+  answer: true,
+  createdAt: true,
+  answeredAt: true,
+}).extend({
+  question: z.string().min(10, "Question must be at least 10 characters").max(1000, "Question is too long"),
+  name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
+  email: z.string().email("Please enter a valid email address").max(255, "Email is too long"),
+  address: z.string().max(500, "Address is too long").optional().or(z.literal("")),
+  phone: z.string().max(20, "Phone number is too long").optional().or(z.literal("")),
+  category: z.enum(questionCategories).default("general"),
+});
+
+export type InsertCommunityQuestion = z.infer<typeof insertCommunityQuestionSchema>;
+export type CommunityQuestion = typeof communityQuestions.$inferSelect;
+
+// Dynamic FAQs - published questions that appear in the FAQ section
+export const dynamicFaqs = pgTable("dynamic_faqs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  question: text("question").notNull(),
+  answer: text("answer").notNull(),
+  category: varchar("category").notNull().default("general"),
+  isNew: boolean("is_new").default(true),
+  viewCount: integer("view_count").default(0),
+  sourceQuestionId: varchar("source_question_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertDynamicFaqSchema = createInsertSchema(dynamicFaqs).omit({
+  id: true,
+  isNew: true,
+  viewCount: true,
+  createdAt: true,
+}).extend({
+  question: z.string().min(10, "Question must be at least 10 characters").max(1000, "Question is too long"),
+  answer: z.string().min(10, "Answer must be at least 10 characters").max(5000, "Answer is too long"),
+  category: z.enum(questionCategories).default("general"),
+  sourceQuestionId: z.string().optional(),
+});
+
+export type InsertDynamicFaq = z.infer<typeof insertDynamicFaqSchema>;
+export type DynamicFaq = typeof dynamicFaqs.$inferSelect;

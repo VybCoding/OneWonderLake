@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertInterestedPartySchema, insertSearchedAddressSchema } from "@shared/schema";
+import { insertInterestedPartySchema, insertSearchedAddressSchema, insertCommunityQuestionSchema, insertDynamicFaqSchema } from "@shared/schema";
 
 const submissionCounts = new Map<string, { count: number; firstSubmission: number }>();
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
@@ -399,6 +399,191 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching searched addresses:", error);
       res.status(500).json({ error: "Failed to fetch searched addresses" });
+    }
+  });
+
+  // Community questions routes (public submission)
+  app.post("/api/questions", async (req: Request, res: Response) => {
+    try {
+      if (!checkRateLimit(req)) {
+        return res.status(429).json({ 
+          error: "Too many submissions. Please try again later.",
+          message: "For security purposes, we limit submissions to 5 per hour." 
+        });
+      }
+
+      const validationResult = insertCommunityQuestionSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid data provided",
+          details: validationResult.error.errors 
+        });
+      }
+
+      const data = validationResult.data;
+      const question = await storage.createCommunityQuestion(data);
+
+      res.status(201).json({ 
+        success: true,
+        message: "Thank you for your question! We'll get back to you soon.",
+        id: question.id 
+      });
+    } catch (error) {
+      console.error("Error creating community question:", error);
+      res.status(500).json({ error: "Failed to submit your question. Please try again." });
+    }
+  });
+
+  // Dynamic FAQs routes (public)
+  app.get("/api/dynamic-faqs", async (_req: Request, res: Response) => {
+    try {
+      const faqs = await storage.getDynamicFaqs();
+      res.json(faqs);
+    } catch (error) {
+      console.error("Error fetching dynamic FAQs:", error);
+      res.status(500).json({ error: "Failed to fetch FAQs" });
+    }
+  });
+
+  // Increment FAQ view count (public)
+  app.post("/api/dynamic-faqs/:id/view", async (req: Request, res: Response) => {
+    try {
+      await storage.incrementFaqViewCount(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error incrementing view count:", error);
+      res.status(500).json({ error: "Failed to update view count" });
+    }
+  });
+
+  // Admin community questions routes
+  app.get("/api/admin/questions", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const questions = await storage.getCommunityQuestions();
+      res.json(questions);
+    } catch (error) {
+      console.error("Error fetching community questions:", error);
+      res.status(500).json({ error: "Failed to fetch questions" });
+    }
+  });
+
+  // Answer a community question (admin only)
+  app.patch("/api/admin/questions/:id/answer", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { answer } = req.body;
+      if (!answer || typeof answer !== 'string' || answer.length < 10) {
+        return res.status(400).json({ error: "Answer must be at least 10 characters" });
+      }
+
+      const question = await storage.answerCommunityQuestion(req.params.id, answer);
+      if (!question) {
+        return res.status(404).json({ error: "Question not found" });
+      }
+
+      res.json(question);
+    } catch (error) {
+      console.error("Error answering question:", error);
+      res.status(500).json({ error: "Failed to answer question" });
+    }
+  });
+
+  // Publish question to FAQ (admin only)
+  app.post("/api/admin/questions/:id/publish", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const faq = await storage.publishQuestionToFaq(req.params.id);
+      if (!faq) {
+        return res.status(400).json({ error: "Question must be answered before publishing" });
+      }
+
+      res.json(faq);
+    } catch (error) {
+      console.error("Error publishing question to FAQ:", error);
+      res.status(500).json({ error: "Failed to publish to FAQ" });
+    }
+  });
+
+  // Create dynamic FAQ directly (admin only)
+  app.post("/api/admin/faqs", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const validationResult = insertDynamicFaqSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid data provided",
+          details: validationResult.error.errors 
+        });
+      }
+
+      const faq = await storage.createDynamicFaq(validationResult.data);
+      res.status(201).json(faq);
+    } catch (error) {
+      console.error("Error creating dynamic FAQ:", error);
+      res.status(500).json({ error: "Failed to create FAQ" });
+    }
+  });
+
+  // Delete dynamic FAQ (admin only)
+  app.delete("/api/admin/faqs/:id", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      await storage.deleteDynamicFaq(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting dynamic FAQ:", error);
+      res.status(500).json({ error: "Failed to delete FAQ" });
+    }
+  });
+
+  // Mark FAQ as not new (admin only)
+  app.patch("/api/admin/faqs/:id/not-new", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      await storage.markFaqNotNew(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking FAQ as not new:", error);
+      res.status(500).json({ error: "Failed to update FAQ" });
     }
   });
 
