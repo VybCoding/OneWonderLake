@@ -83,6 +83,7 @@ export default function AdminPage() {
   const [interestFilter, setInterestFilter] = useState<boolean | null>(null);
   const [selectedQuestion, setSelectedQuestion] = useState<CommunityQuestion | null>(null);
   const [answerText, setAnswerText] = useState("");
+  const [editedQuestionText, setEditedQuestionText] = useState("");
   const [showNewFaqDialog, setShowNewFaqDialog] = useState(false);
   const [activeTab, setActiveTab] = useState("responses");
   const [newFaqQuestion, setNewFaqQuestion] = useState("");
@@ -146,8 +147,8 @@ export default function AdminPage() {
   });
 
   const answerMutation = useMutation({
-    mutationFn: async ({ id, answer }: { id: string; answer: string }) => {
-      const response = await apiRequest("PATCH", `/api/admin/questions/${id}/answer`, { answer });
+    mutationFn: async ({ id, answer, editedQuestion }: { id: string; answer: string; editedQuestion?: string }) => {
+      const response = await apiRequest("PATCH", `/api/admin/questions/${id}/answer`, { answer, editedQuestion });
       return response.json();
     },
     onSuccess: () => {
@@ -158,6 +159,7 @@ export default function AdminPage() {
       });
       setSelectedQuestion(null);
       setAnswerText("");
+      setEditedQuestionText("");
     },
     onError: () => {
       toast({
@@ -793,6 +795,7 @@ export default function AdminPage() {
                                     onClick={() => {
                                       setSelectedQuestion(q);
                                       setAnswerText(q.answer || "");
+                                      setEditedQuestionText(q.question);
                                     }}
                                     data-testid={`button-answer-${q.id}`}
                                   >
@@ -837,6 +840,7 @@ export default function AdminPage() {
                                       onClick={() => {
                                         setSelectedQuestion(q);
                                         setAnswerText(q.answer || "");
+                                        setEditedQuestionText(q.question);
                                       }}
                                       data-testid={`button-edit-${q.id}`}
                                     >
@@ -1193,23 +1197,29 @@ export default function AdminPage() {
           <DialogHeader>
             <DialogTitle>Answer Question</DialogTitle>
             <DialogDescription>
-              Provide a helpful answer to this community question
+              Review and edit the question for clarity, then provide a helpful answer. User identity is kept private.
             </DialogDescription>
           </DialogHeader>
 
           {selectedQuestion && (
             <div className="space-y-4">
-              <div className="bg-muted p-4 rounded-lg">
-                <p className="font-medium text-foreground mb-2">{selectedQuestion.question}</p>
-                <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-                  <span>{selectedQuestion.name}</span>
-                  <span>•</span>
-                  <span>{selectedQuestion.email}</span>
-                  <span>•</span>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium">Question (editable for clarity)</label>
                   <Badge className={`text-xs ${categoryColors[selectedQuestion.category]}`}>
                     {categoryLabels[selectedQuestion.category]}
                   </Badge>
                 </div>
+                <Textarea
+                  value={editedQuestionText}
+                  onChange={(e) => setEditedQuestionText(e.target.value)}
+                  placeholder="Edit the question for clarity..."
+                  className="min-h-[80px]"
+                  data-testid="textarea-edit-question"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  You can edit this question before publishing to ensure accuracy and professionalism.
+                </p>
               </div>
 
               <div>
@@ -1233,11 +1243,15 @@ export default function AdminPage() {
                 </Button>
                 <Button
                   onClick={() => {
-                    if (selectedQuestion && answerText.trim().length >= 10) {
-                      answerMutation.mutate({ id: selectedQuestion.id, answer: answerText });
+                    if (selectedQuestion && answerText.trim().length >= 10 && editedQuestionText.trim().length >= 5) {
+                      answerMutation.mutate({ 
+                        id: selectedQuestion.id, 
+                        answer: answerText,
+                        editedQuestion: editedQuestionText.trim() !== selectedQuestion.question ? editedQuestionText : undefined
+                      });
                     }
                   }}
-                  disabled={answerText.trim().length < 10 || answerMutation.isPending}
+                  disabled={answerText.trim().length < 10 || editedQuestionText.trim().length < 5 || answerMutation.isPending}
                   data-testid="button-save-answer"
                 >
                   {answerMutation.isPending ? "Saving..." : "Save Answer"}
