@@ -237,13 +237,6 @@ export default function FAQ() {
         <div className="flex flex-col items-start gap-2 flex-1">
           <span>{faq.question}</span>
           <div className="flex flex-wrap gap-2">
-            <Badge
-              variant="secondary"
-              className={`text-xs ${categoryColors[faq.category]}`}
-              data-testid={`badge-category-${faq.id}`}
-            >
-              {categoryLabels[faq.category]}
-            </Badge>
             {faq.isNew && (
               <Badge className="text-xs bg-primary/10 text-primary border-primary/20" data-testid={`badge-new-${faq.id}`}>
                 <Sparkles className="w-3 h-3 mr-1" />
