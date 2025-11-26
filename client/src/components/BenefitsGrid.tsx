@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DollarSign, Vote, Compass, ShieldCheck, Users, Navigation, HelpCircle, Send } from "lucide-react";
+import { DollarSign, Vote, Compass, ShieldCheck, Users, Navigation, HelpCircle, Send, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Dialog,
@@ -22,6 +22,9 @@ interface Benefit {
     headline: string;
     paragraphs: string[];
     keyPoints: string[];
+    lgdfKeyPoints?: string[];
+    mftKeyPoints?: string[];
+    censusNote?: string;
   };
 }
 
@@ -31,20 +34,35 @@ const benefits: Benefit[] = [
     icon: DollarSign,
     title: "Bring State Tax Dollars Home",
     shortDescription:
-      "Capture LGDF (Local Government Distributive Fund) money that currently stays with the state to fund Wonder Lake infrastructure and services.",
+      "Capture LGDF (Local Government Distributive Fund) and MFT (Motor Fuel Tax) money that currently stays with the state to fund Wonder Lake infrastructure and services.",
     fullContent: {
       headline: "Your Tax Dollars Should Work for Wonder Lake",
       paragraphs: [
         "Every year, Illinois residents pay state income taxes. A portion of that money is redistributed back to municipalities through the Local Government Distributive Fund (LGDF). But here's the catch: if you live in an unincorporated area, your share of that money stays with the State—it never comes back to your community.",
-        "By annexing into the Village of Wonder Lake, we unlock access to these LGDF funds. This creates an entirely new revenue stream that can be used for road maintenance, infrastructure improvements, park upgrades, and community services—all without raising local property taxes.",
+        "Additionally, the Motor Fuel Tax (MFT) fund distributes gas tax revenue to municipalities based on population. These dedicated road funds are specifically earmarked for transportation infrastructure—money that currently bypasses unincorporated areas entirely.",
+        "By annexing into the Village of Wonder Lake, we unlock access to both LGDF and MFT funds. This creates entirely new revenue streams that can fund community improvements—all without raising local property taxes.",
         "This isn't about creating new taxes. It's about redirecting money you're already paying so it benefits Wonder Lake instead of disappearing into the state's general fund.",
       ],
-      keyPoints: [
-        "LGDF funds are distributed based on population—more residents means more funding",
-        "These funds can cover road repairs, snow removal, and infrastructure without property tax increases",
+      keyPoints: [],
+      lgdfKeyPoints: [
+        "LGDF funds are distributed based on population—more residents means more funding (approximately $178 per resident annually)",
+        "The Village has complete flexibility in how LGDF funds are spent",
+        "Common uses include: general operations, public safety, code enforcement, administration, and community programs",
+        "Can fund park maintenance, community events, and quality-of-life improvements",
+        "Supplements the Village budget without requiring property tax increases",
         "Unincorporated residents currently receive $0 of this redistributed income tax money",
-        "Annexation immediately qualifies Wonder Lake for increased LGDF allocation",
       ],
+      mftKeyPoints: [
+        "MFT funds are distributed based on population (approximately $22.50 per resident annually)",
+        "These funds are legally restricted to transportation-related purposes only",
+        "Eligible uses include: road construction, resurfacing, and repairs",
+        "Can fund sidewalk installation, bike path development, and pedestrian infrastructure",
+        "Covers street lighting, traffic signals, and road signage",
+        "Pays for snow removal, salt/sand, and winter road maintenance",
+        "Can be used for engineering studies, road surveys, and infrastructure planning",
+        "Currently, unincorporated roads rely solely on County priority and budget decisions",
+      ],
+      censusNote: "Timing matters: LGDF and MFT allocations are based on official U.S. Census population counts. By completing annexation before the 2030 Census, Wonder Lake can capture the full population count automatically. Waiting until after the census would require the Village to fund a costly special census (typically $15-25 per household) just to update the population figures and access the additional funding.",
     },
   },
   {
@@ -306,17 +324,62 @@ export default function BenefitsGrid() {
                   <FundRevenueCalculator />
                 )}
 
-                <div className="bg-muted/50 rounded-lg p-4 mt-6">
-                  <h4 className="font-semibold text-foreground mb-3">Key Points:</h4>
-                  <ul className="space-y-2">
-                    {selectedBenefit.fullContent.keyPoints.map((point, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
-                        <span className="text-primary mt-1">•</span>
-                        <span>{point}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {/* LGDF Key Points Section */}
+                {selectedBenefit.fullContent.lgdfKeyPoints && selectedBenefit.fullContent.lgdfKeyPoints.length > 0 && (
+                  <div className="bg-muted/50 rounded-lg p-4 mt-6" data-testid="section-lgdf-keypoints">
+                    <h4 className="font-semibold text-foreground mb-3">LGDF (Local Government Distributive Fund):</h4>
+                    <ul className="space-y-2">
+                      {selectedBenefit.fullContent.lgdfKeyPoints.map((point, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <span className="text-primary mt-1">•</span>
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* MFT Key Points Section */}
+                {selectedBenefit.fullContent.mftKeyPoints && selectedBenefit.fullContent.mftKeyPoints.length > 0 && (
+                  <div className="bg-muted/50 rounded-lg p-4 mt-4" data-testid="section-mft-keypoints">
+                    <h4 className="font-semibold text-foreground mb-3">MFT (Motor Fuel Tax Fund):</h4>
+                    <ul className="space-y-2">
+                      {selectedBenefit.fullContent.mftKeyPoints.map((point, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <span className="text-primary mt-1">•</span>
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Census Note */}
+                {selectedBenefit.fullContent.censusNote && (
+                  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mt-4" data-testid="section-census-note">
+                    <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-2 flex items-center gap-2">
+                      <Clock className="w-4 h-4" /> Why Timing Matters
+                    </h4>
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                      {selectedBenefit.fullContent.censusNote}
+                    </p>
+                  </div>
+                )}
+
+                {/* Standard Key Points Section (for other benefits) */}
+                {selectedBenefit.fullContent.keyPoints.length > 0 && (
+                  <div className="bg-muted/50 rounded-lg p-4 mt-6">
+                    <h4 className="font-semibold text-foreground mb-3">Key Points:</h4>
+                    <ul className="space-y-2">
+                      {selectedBenefit.fullContent.keyPoints.map((point, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <span className="text-primary mt-1">•</span>
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 <div className="flex justify-end pt-4">
                   <Button 
