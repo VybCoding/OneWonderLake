@@ -11,8 +11,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import QuestionForm from "@/components/QuestionForm";
+import FundRevenueCalculator from "@/components/FundRevenueCalculator";
 
 interface Benefit {
+  id: string;
   icon: typeof DollarSign;
   title: string;
   shortDescription: string;
@@ -25,6 +27,7 @@ interface Benefit {
 
 const benefits: Benefit[] = [
   {
+    id: "state-tax-dollars",
     icon: DollarSign,
     title: "Bring State Tax Dollars Home",
     shortDescription:
@@ -45,6 +48,7 @@ const benefits: Benefit[] = [
     },
   },
   {
+    id: "representation",
     icon: Vote,
     title: "Gain a Voice (Representation)",
     shortDescription:
@@ -66,6 +70,7 @@ const benefits: Benefit[] = [
     },
   },
   {
+    id: "self-determination",
     icon: Compass,
     title: "Define Our Future (Self-Determination)",
     shortDescription:
@@ -87,6 +92,7 @@ const benefits: Benefit[] = [
     },
   },
   {
+    id: "local-control",
     icon: ShieldCheck,
     title: "Establish Local Control & Protect Rights",
     shortDescription:
@@ -108,6 +114,7 @@ const benefits: Benefit[] = [
     },
   },
   {
+    id: "safety-services",
     icon: Users,
     title: "Improve Safety & Services",
     shortDescription:
@@ -130,6 +137,7 @@ const benefits: Benefit[] = [
     },
   },
   {
+    id: "golf-cart",
     icon: Navigation,
     title: "Recreational Freedoms (Golf Cart Ordinance)",
     shortDescription:
@@ -293,6 +301,10 @@ export default function BenefitsGrid() {
                     {paragraph}
                   </p>
                 ))}
+
+                {selectedBenefit.id === "state-tax-dollars" && (
+                  <FundRevenueCalculator />
+                )}
 
                 <div className="bg-muted/50 rounded-lg p-4 mt-6">
                   <h4 className="font-semibold text-foreground mb-3">Key Points:</h4>
