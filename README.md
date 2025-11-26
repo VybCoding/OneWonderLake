@@ -26,7 +26,16 @@ Unite currently unincorporated neighborhoods—specifically "doughnut hole" isla
   - Current annual tax bill entry
   - Post-annexation tax calculation using Village levy rate ($0.2847 per $100 EAV)
   - Step-by-step guide to finding property info on McHenry County portal
+  - **Tax Breakdown Pinwheel**: Interactive donut chart visualization showing:
+    - Distribution of tax dollars across all taxing bodies (schools, county, township, fire, parks, library, community college, village)
+    - Education total prominently displayed (largest tax burden)
+    - Scrollable category list with always-visible scrollbar for easy browsing
+    - Hover interactions highlighting specific taxing body details
+    - Formatted currency amounts and percentages for each body
   - Detailed breakdown showing Village levy amount, percentage increase, and monthly impact
+  - Loading animation with calculating state
+  - Auto-scroll to results when calculation completes
+  - Scroll indicator prompting users to view full breakdown
 - **Precise Geospatial Detection**: Uses official municipal boundary polygon (not mock data)
 - **Responsive Civic Design**: Professional governmental aesthetic, mobile-friendly
 - **Comprehensive FAQ (11 Items)**: Myth-busting answers addressing resident concerns:
@@ -110,14 +119,15 @@ The production server automatically binds to `0.0.0.0` and uses the `PORT` envir
 ```
 client/src/
 ├── components/
-│   ├── AddressChecker.tsx      ← Main tool with map integration + interest form
-│   ├── WonderLakeMap.tsx       ← Interactive Leaflet map (locked zoom)
-│   ├── TaxEstimator.tsx        ← Post-annexation tax calculator + interest form
-│   ├── InterestForm.tsx        ← Reusable interest submission dialog
-│   ├── BenefitsGrid.tsx        ← Six pillar cards with click-to-expand dialogs
-│   ├── FAQ.tsx                 ← 11-item persuasive FAQ
-│   ├── Hero.tsx                ← Campaign hero section
-│   ├── Mission.tsx, Vision.tsx ← Core messaging
+│   ├── AddressChecker.tsx           ← Main tool with map integration + interest form
+│   ├── WonderLakeMap.tsx            ← Interactive Leaflet map (locked zoom)
+│   ├── TaxEstimator.tsx             ← Post-annexation tax calculator + interest form
+│   ├── TaxBreakdownPinwheel.tsx      ← Donut chart visualization of tax distribution
+│   ├── InterestForm.tsx             ← Reusable interest submission dialog
+│   ├── BenefitsGrid.tsx             ← Six pillar cards with click-to-expand dialogs
+│   ├── FAQ.tsx                      ← 11-item persuasive FAQ
+│   ├── Hero.tsx                     ← Campaign hero section
+│   ├── Mission.tsx, Vision.tsx      ← Core messaging
 │   └── Navbar.tsx, Footer.tsx
 ├── data/
 │   ├── village-data.ts         ← Exports official boundary GeoJSON
@@ -247,6 +257,6 @@ Navigation automatically adjusts: scroll links work on home page, page links nav
 
 ---
 
-**Last Updated**: November 25, 2024  
+**Last Updated**: November 26, 2024  
 **Status**: ✅ Production Ready - All Core Features Functional  
-**Current Version**: 4.1 (Interest Tracking + Admin Dashboard + Production Deployment)
+**Current Version**: 4.2 (Tax Breakdown Pinwheel + Interactive Visualization)
