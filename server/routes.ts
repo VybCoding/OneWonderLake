@@ -45,6 +45,141 @@ interface TaxEstimate {
 
 const VILLAGE_OF_WONDER_LAKE_LEVY_RATE = 0.2847;
 
+interface TaxingBody {
+  id: string;
+  name: string;
+  shortName: string;
+  rate: number;
+  description: string;
+  color: string;
+}
+
+const TAXING_BODIES: TaxingBody[] = [
+  {
+    id: "elem_school",
+    name: "Elementary School District",
+    shortName: "Elem School",
+    rate: 3.2145,
+    description: "Funds K-8 education including teachers, facilities, and programs",
+    color: "#3b82f6"
+  },
+  {
+    id: "high_school",
+    name: "High School District",
+    shortName: "High School",
+    rate: 2.4872,
+    description: "Supports high school education, athletics, and extracurricular activities",
+    color: "#8b5cf6"
+  },
+  {
+    id: "community_college",
+    name: "McHenry County College",
+    shortName: "MCC",
+    rate: 0.4521,
+    description: "Community college providing higher education and workforce training",
+    color: "#06b6d4"
+  },
+  {
+    id: "county",
+    name: "McHenry County",
+    shortName: "County",
+    rate: 0.5834,
+    description: "County services including roads, courts, health department, and sheriff",
+    color: "#10b981"
+  },
+  {
+    id: "township",
+    name: "Greenwood Township",
+    shortName: "Township",
+    rate: 0.1892,
+    description: "Local road maintenance, general assistance, and assessor services",
+    color: "#f59e0b"
+  },
+  {
+    id: "fire",
+    name: "Fire Protection District",
+    shortName: "Fire District",
+    rate: 0.8234,
+    description: "Fire protection, emergency medical services, and rescue operations",
+    color: "#ef4444"
+  },
+  {
+    id: "park",
+    name: "Park District",
+    shortName: "Parks",
+    rate: 0.3156,
+    description: "Parks, recreation programs, and community facilities",
+    color: "#22c55e"
+  },
+  {
+    id: "library",
+    name: "Library District",
+    shortName: "Library",
+    rate: 0.2347,
+    description: "Public library services, programs, and resources",
+    color: "#a855f7"
+  },
+  {
+    id: "other",
+    name: "Other Taxing Bodies",
+    shortName: "Other",
+    rate: 0.1823,
+    description: "Conservation, mosquito abatement, and other special districts",
+    color: "#6b7280"
+  }
+];
+
+const TOTAL_NON_VILLAGE_RATE = TAXING_BODIES.reduce((sum, body) => sum + body.rate, 0);
+
+interface TaxBreakdown {
+  taxingBodies: Array<TaxingBody & { amount: number; percentage: number }>;
+  villageLevyBody: TaxingBody & { amount: number; percentage: number };
+  totalCurrentRate: number;
+  totalPostAnnexationRate: number;
+}
+
+function calculateTaxBreakdown(eav: number, currentTax: number): TaxBreakdown {
+  const currentEffectiveRate = currentTax > 0 && eav > 0 ? (currentTax / eav) * 100 : TOTAL_NON_VILLAGE_RATE;
+  const rateMultiplier = currentEffectiveRate / TOTAL_NON_VILLAGE_RATE;
+  
+  const taxingBodiesWithAmounts = TAXING_BODIES.map(body => {
+    const adjustedRate = body.rate * rateMultiplier;
+    const amount = (eav / 100) * adjustedRate;
+    return {
+      ...body,
+      rate: adjustedRate,
+      amount,
+      percentage: currentTax > 0 ? (amount / currentTax) * 100 : (body.rate / TOTAL_NON_VILLAGE_RATE) * 100
+    };
+  });
+
+  const villageLevyAmount = (eav / 100) * VILLAGE_OF_WONDER_LAKE_LEVY_RATE;
+  const totalPostAnnexation = currentTax + villageLevyAmount;
+  
+  const villageLevyBody = {
+    id: "village",
+    name: "Village of Wonder Lake",
+    shortName: "Village",
+    rate: VILLAGE_OF_WONDER_LAKE_LEVY_RATE,
+    description: "Municipal services including water, roads, police, and village administration",
+    color: "#0ea5e9",
+    amount: villageLevyAmount,
+    percentage: (villageLevyAmount / totalPostAnnexation) * 100
+  };
+
+  const adjustedBodiesForPostAnnexation = taxingBodiesWithAmounts.map(body => ({
+    ...body,
+    percentage: (body.amount / totalPostAnnexation) * 100
+  }));
+
+  return {
+    taxingBodies: adjustedBodiesForPostAnnexation,
+    villageLevyBody,
+    totalCurrentRate: currentEffectiveRate,
+    totalPostAnnexationRate: currentEffectiveRate + VILLAGE_OF_WONDER_LAKE_LEVY_RATE
+  };
+}
+
 function calculatePostAnnexationTax(eav: number, currentTax: number): TaxEstimate {
   const villageLevyAmount = (eav / 100) * VILLAGE_OF_WONDER_LAKE_LEVY_RATE;
   const estimatedPostAnnexationTax = currentTax + villageLevyAmount;
@@ -117,6 +252,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "Your actual rate may vary based on specific location and applicable districts",
         "Look up your EAV and current taxes on the McHenry County Property Tax Inquiry portal"
       ]
+    });
+  });
+
+  app.post("/api/tax/breakdown", async (req: Request, res: Response) => {
+    try {
+      const { eav, currentTax } = req.body;
+      
+      if (typeof eav !== "number" || eav <= 0) {
+        return res.status(400).json({ error: "Valid EAV (Equalized Assessed Value) is required" });
+      }
+
+      if (typeof currentTax !== "number" || currentTax < 0) {
+        return res.status(400).json({ error: "Valid current tax amount is required" });
+      }
+
+      const breakdown = calculateTaxBreakdown(eav, currentTax);
+      res.json(breakdown);
+    } catch (error) {
+      console.error("Tax breakdown error:", error);
+      res.status(500).json({ error: "Failed to calculate tax breakdown" });
+    }
+  });
+
+  app.get("/api/taxing-bodies", (_req: Request, res: Response) => {
+    res.json({
+      taxingBodies: TAXING_BODIES,
+      villageLevyRate: VILLAGE_OF_WONDER_LAKE_LEVY_RATE,
+      totalNonVillageRate: TOTAL_NON_VILLAGE_RATE,
+      dataSource: "McHenry County Tax Extension Records (2024)",
+      disclaimer: "Rates shown are averages for the Wonder Lake area. Your actual rates may vary based on specific taxing districts."
     });
   });
 

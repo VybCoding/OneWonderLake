@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Calculator, TrendingUp, DollarSign, AlertCircle, ChevronDown, ChevronUp, Info, ExternalLink, HelpCircle, FileText, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Calculator, TrendingUp, DollarSign, AlertCircle, ChevronDown, ChevronUp, Info, ExternalLink, HelpCircle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import {
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import InterestForm from "@/components/InterestForm";
+import TaxBreakdownPinwheel from "@/components/TaxBreakdownPinwheel";
 
 interface TaxEstimate {
   currentTax: number;
@@ -23,6 +24,24 @@ interface TaxEstimate {
   difference: number;
   percentIncrease: number;
   monthlyIncrease: number;
+}
+
+interface TaxingBodyData {
+  id: string;
+  name: string;
+  shortName: string;
+  rate: number;
+  description: string;
+  color: string;
+  amount: number;
+  percentage: number;
+}
+
+interface TaxBreakdown {
+  taxingBodies: TaxingBodyData[];
+  villageLevyBody: TaxingBodyData;
+  totalCurrentRate: number;
+  totalPostAnnexationRate: number;
 }
 
 interface VillageTaxInfo {
@@ -62,6 +81,13 @@ export default function TaxEstimator({ initialEav = "", initialTax = "" }: TaxEs
     }
   });
 
+  const breakdownMutation = useMutation({
+    mutationFn: async (data: { eav: number; currentTax: number }) => {
+      const response = await apiRequest("POST", "/api/tax/breakdown", data);
+      return response.json() as Promise<TaxBreakdown>;
+    }
+  });
+
   const handleCalculate = () => {
     const eavNum = parseFloat(eav.replace(/,/g, ""));
     const taxNum = parseFloat(currentTax.replace(/,/g, ""));
@@ -73,7 +99,9 @@ export default function TaxEstimator({ initialEav = "", initialTax = "" }: TaxEs
       return;
     }
 
-    estimateMutation.mutate({ eav: eavNum, currentTax: taxNum });
+    const data = { eav: eavNum, currentTax: taxNum };
+    estimateMutation.mutate(data);
+    breakdownMutation.mutate(data);
   };
 
   const formatCurrency = (amount: number) => {
@@ -347,6 +375,16 @@ export default function TaxEstimator({ initialEav = "", initialTax = "" }: TaxEs
               </CardContent>
             </Card>
 
+            {breakdownMutation.data && (
+              <TaxBreakdownPinwheel
+                taxingBodies={breakdownMutation.data.taxingBodies}
+                villageLevyBody={breakdownMutation.data.villageLevyBody}
+                currentTax={estimateMutation.data.currentTax}
+                postAnnexationTax={estimateMutation.data.estimatedPostAnnexationTax}
+                showPostAnnexation={true}
+              />
+            )}
+
             <div className="p-4 rounded-lg border bg-accent/20 text-sm" data-testid="section-disclaimer">
               <div className="flex gap-3">
                 <AlertCircle className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
@@ -381,6 +419,7 @@ export default function TaxEstimator({ initialEav = "", initialTax = "" }: TaxEs
                   variant="outline"
                   onClick={() => {
                     estimateMutation.reset();
+                    breakdownMutation.reset();
                     setEav("");
                     setCurrentTax("");
                   }}
