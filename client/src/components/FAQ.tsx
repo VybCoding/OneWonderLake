@@ -20,6 +20,7 @@ interface StaticFaq {
   question: string;
   answer: string;
   category: "general" | "taxes" | "property_rights" | "services";
+  hasCalculator?: boolean;
 }
 
 const staticFaqs: StaticFaq[] = [
@@ -115,6 +116,7 @@ interface CombinedFaq {
   isNew?: boolean;
   viewCount?: number;
   isDynamic?: boolean;
+  hasCalculator?: boolean;
 }
 
 export default function FAQ() {
@@ -135,6 +137,7 @@ export default function FAQ() {
       answer: faq.answer,
       category: faq.category,
       isDynamic: false,
+      hasCalculator: faq.hasCalculator,
     }));
 
     const dynamicItems: CombinedFaq[] = dynamicFaqs.map((faq) => ({
@@ -255,7 +258,12 @@ export default function FAQ() {
         </div>
       </AccordionTrigger>
       <AccordionContent className="text-muted-foreground leading-relaxed">
-        {faq.answer}
+        <p className="mb-4">{faq.answer}</p>
+        {faq.hasCalculator && (
+          <div className="mt-4" data-testid="faq-calculator">
+            <FundRevenueCalculator />
+          </div>
+        )}
       </AccordionContent>
     </AccordionItem>
   );
