@@ -485,12 +485,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      const { answer, editedQuestion } = req.body;
+      const { answer, editedQuestion, editedCategory } = req.body;
       if (!answer || typeof answer !== 'string' || answer.length < 10) {
         return res.status(400).json({ error: "Answer must be at least 10 characters" });
       }
 
-      const question = await storage.answerCommunityQuestion(req.params.id, answer, editedQuestion);
+      const question = await storage.answerCommunityQuestion(req.params.id, answer, editedQuestion, editedCategory);
       if (!question) {
         return res.status(404).json({ error: "Question not found" });
       }

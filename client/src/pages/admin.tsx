@@ -84,6 +84,7 @@ export default function AdminPage() {
   const [selectedQuestion, setSelectedQuestion] = useState<CommunityQuestion | null>(null);
   const [answerText, setAnswerText] = useState("");
   const [editedQuestionText, setEditedQuestionText] = useState("");
+  const [editedCategory, setEditedCategory] = useState<string>("general");
   const [showNewFaqDialog, setShowNewFaqDialog] = useState(false);
   const [activeTab, setActiveTab] = useState("responses");
   const [newFaqQuestion, setNewFaqQuestion] = useState("");
@@ -147,8 +148,8 @@ export default function AdminPage() {
   });
 
   const answerMutation = useMutation({
-    mutationFn: async ({ id, answer, editedQuestion }: { id: string; answer: string; editedQuestion?: string }) => {
-      const response = await apiRequest("PATCH", `/api/admin/questions/${id}/answer`, { answer, editedQuestion });
+    mutationFn: async ({ id, answer, editedQuestion, editedCategory }: { id: string; answer: string; editedQuestion?: string; editedCategory?: string }) => {
+      const response = await apiRequest("PATCH", `/api/admin/questions/${id}/answer`, { answer, editedQuestion, editedCategory });
       return response.json();
     },
     onSuccess: () => {
@@ -160,6 +161,7 @@ export default function AdminPage() {
       setSelectedQuestion(null);
       setAnswerText("");
       setEditedQuestionText("");
+      setEditedCategory("general");
     },
     onError: () => {
       toast({
@@ -796,6 +798,7 @@ export default function AdminPage() {
                                       setSelectedQuestion(q);
                                       setAnswerText(q.answer || "");
                                       setEditedQuestionText(q.question);
+                                      setEditedCategory(q.category);
                                     }}
                                     data-testid={`button-answer-${q.id}`}
                                   >
@@ -841,6 +844,7 @@ export default function AdminPage() {
                                         setSelectedQuestion(q);
                                         setAnswerText(q.answer || "");
                                         setEditedQuestionText(q.question);
+                                        setEditedCategory(q.category);
                                       }}
                                       data-testid={`button-edit-${q.id}`}
                                     >
@@ -1203,23 +1207,36 @@ export default function AdminPage() {
 
           {selectedQuestion && (
             <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium">Question (editable for clarity)</label>
-                  <Badge className={`text-xs ${categoryColors[selectedQuestion.category]}`}>
-                    {categoryLabels[selectedQuestion.category]}
-                  </Badge>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium mb-2 block">Question (editable for clarity)</label>
+                  <Textarea
+                    value={editedQuestionText}
+                    onChange={(e) => setEditedQuestionText(e.target.value)}
+                    placeholder="Edit the question for clarity..."
+                    className="min-h-[80px]"
+                    data-testid="textarea-edit-question"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    You can edit this question before publishing to ensure accuracy and professionalism.
+                  </p>
                 </div>
-                <Textarea
-                  value={editedQuestionText}
-                  onChange={(e) => setEditedQuestionText(e.target.value)}
-                  placeholder="Edit the question for clarity..."
-                  className="min-h-[80px]"
-                  data-testid="textarea-edit-question"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  You can edit this question before publishing to ensure accuracy and professionalism.
-                </p>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Category</label>
+                  <Select value={editedCategory} onValueChange={setEditedCategory}>
+                    <SelectTrigger data-testid="select-edit-category">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(categoryLabels).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div>
@@ -1247,7 +1264,8 @@ export default function AdminPage() {
                       answerMutation.mutate({ 
                         id: selectedQuestion.id, 
                         answer: answerText,
-                        editedQuestion: editedQuestionText.trim() !== selectedQuestion.question ? editedQuestionText : undefined
+                        editedQuestion: editedQuestionText.trim() !== selectedQuestion.question ? editedQuestionText : undefined,
+                        editedCategory: editedCategory !== selectedQuestion.category ? editedCategory : undefined
                       });
                     }
                   }}

@@ -119,11 +119,6 @@ export default function QuestionForm({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="bg-muted/50 rounded-lg p-4 mb-4 border">
-          <p className="text-sm font-medium text-muted-foreground mb-1">Your Question:</p>
-          <p className="text-foreground" data-testid="text-question-preview">{question}</p>
-        </div>
-
         {submitStatus === "success" ? (
           <div className="py-6 text-center">
             <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />

@@ -38,7 +38,7 @@ export interface IStorage {
   createCommunityQuestion(question: InsertCommunityQuestion): Promise<CommunityQuestion>;
   getCommunityQuestions(): Promise<CommunityQuestion[]>;
   getCommunityQuestionById(id: string): Promise<CommunityQuestion | undefined>;
-  answerCommunityQuestion(id: string, answer: string, editedQuestion?: string): Promise<CommunityQuestion | undefined>;
+  answerCommunityQuestion(id: string, answer: string, editedQuestion?: string, editedCategory?: string): Promise<CommunityQuestion | undefined>;
   publishQuestionToFaq(id: string): Promise<DynamicFaq | undefined>;
   
   // Dynamic FAQs operations
@@ -142,7 +142,7 @@ export class DatabaseStorage implements IStorage {
     return question;
   }
 
-  async answerCommunityQuestion(id: string, answer: string, editedQuestion?: string): Promise<CommunityQuestion | undefined> {
+  async answerCommunityQuestion(id: string, answer: string, editedQuestion?: string, editedCategory?: string): Promise<CommunityQuestion | undefined> {
     const updateData: any = { 
       answer, 
       status: "answered",
@@ -151,6 +151,10 @@ export class DatabaseStorage implements IStorage {
     
     if (editedQuestion && editedQuestion.trim().length > 0) {
       updateData.question = editedQuestion.trim();
+    }
+    
+    if (editedCategory && ["general", "taxes", "property_rights", "services"].includes(editedCategory)) {
+      updateData.category = editedCategory;
     }
     
     const [updated] = await db
