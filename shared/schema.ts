@@ -151,3 +151,11 @@ export const insertDynamicFaqSchema = createInsertSchema(dynamicFaqs).omit({
 
 export type InsertDynamicFaq = z.infer<typeof insertDynamicFaqSchema>;
 export type DynamicFaq = typeof dynamicFaqs.$inferSelect;
+
+// Build info type for version tracking
+export interface BuildInfo {
+  version: string;
+  buildDate: string;
+  buildTime: string;
+  gitCommit: string;
+}

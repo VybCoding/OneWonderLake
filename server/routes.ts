@@ -1,8 +1,30 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import { execSync } from "child_process";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertInterestedPartySchema, insertSearchedAddressSchema, insertCommunityQuestionSchema, insertDynamicFaqSchema } from "@shared/schema";
+import { insertInterestedPartySchema, insertSearchedAddressSchema, insertCommunityQuestionSchema, insertDynamicFaqSchema, type BuildInfo } from "@shared/schema";
+
+function getBuildInfo(): BuildInfo {
+  const now = new Date();
+  let gitCommit = "unknown";
+  let commitCount = 0;
+  
+  try {
+    gitCommit = execSync("git rev-parse --short HEAD").toString().trim();
+    commitCount = parseInt(execSync("git rev-list --count HEAD").toString().trim(), 10);
+  } catch {
+  }
+  
+  return {
+    version: `1.1.${commitCount}`,
+    buildDate: now.toISOString().split("T")[0],
+    buildTime: now.toISOString(),
+    gitCommit,
+  };
+}
+
+const BUILD_INFO = getBuildInfo();
 
 const submissionCounts = new Map<string, { count: number; firstSubmission: number }>();
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
@@ -603,6 +625,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error marking FAQ as not new:", error);
       res.status(500).json({ error: "Failed to update FAQ" });
     }
+  });
+
+  // Build info endpoint - returns version and build timestamp
+  app.get("/api/build-info", (_req: Request, res: Response) => {
+    res.json(BUILD_INFO);
   });
 
   const httpServer = createServer(app);
