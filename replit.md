@@ -34,6 +34,13 @@ All address lookups are tracked in the database, recording address, result type,
 #### Admin Dashboard (Community Sentiment Dashboard)
 A protected `/admin` panel using Replit Auth for campaign organizers. It features statistics cards for interested/not interested counts and total address searches, a clickable filter system for responses, and separate tabs for detailed responses and address search logs. Both tabs support CSV export.
 
+#### Admin Map Visualization
+An interactive map tab in the admin dashboard displaying color-coded pins to visualize community sentiment geographically:
+- **Green pins**: Residents interested in annexation
+- **Red pins**: Residents not interested in annexation  
+- **Grey pins**: Searched addresses with no expressed preference
+The map includes the village boundary overlay, summary statistics cards, and clickable popups showing address details. Coordinates are captured during address lookups and stored with interest submissions for geographic analysis.
+
 #### Enhanced FAQ Section with Community Questions
 Combines static and dynamic content with search, category filters, and "New" / "Popular" badges. A "Have More Questions?" chat interface allows users to submit questions, with smart suggestions and rate limiting. FAQ items can include optional `linkTo` properties to deep-link to other tools (e.g., the Tax Estimator from property tax questions).
 
@@ -62,8 +69,8 @@ Full-stack JavaScript setup:
 - **Authentication**: Replit Auth
 
 ### Database Schema
-- `interested_parties`: Stores resident interest/disinterest, contact info, source, consent, and unsubscribe data.
-- `searched_addresses`: Records address lookups, result types, and timestamps.
+- `interested_parties`: Stores resident interest/disinterest, contact info, source, consent, unsubscribe data, and geocoded coordinates (latitude/longitude) for map visualization.
+- `searched_addresses`: Records address lookups, result types, timestamps, and geocoded coordinates.
 - `community_questions`: Stores submitted questions, submitter info, category, status, answer, and consent data.
 - `dynamic_faqs`: Stores FAQ content, category, view count, and creation metadata.
 
