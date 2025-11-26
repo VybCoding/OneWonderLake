@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 import { execSync } from "child_process";
 import { join } from "path";
 import { randomBytes } from "crypto";
@@ -16,7 +16,6 @@ function loadBuildInfo(): BuildInfo {
   const possiblePaths = [
     join(process.cwd(), "build-info.json"),
     join(process.cwd(), "dist", "build-info.json"),
-    "/home/runner/workspace/build-info.json",
   ];
   
   for (const buildInfoPath of possiblePaths) {
@@ -40,15 +39,32 @@ function loadBuildInfo(): BuildInfo {
     gitCommit = execSync("git rev-parse --short HEAD").toString().trim();
     commitCount = parseInt(execSync("git rev-list --count HEAD").toString().trim(), 10);
     console.log("[BUILD-INFO] Generated from git:", { version: `1.1.${commitCount}`, gitCommit });
+    
+    const buildInfo: BuildInfo = {
+      version: `1.1.${commitCount}`,
+      buildDate: now.toISOString().split("T")[0],
+      buildTime: now.toISOString(),
+      gitCommit,
+    };
+    
+    const writePath = join(process.cwd(), "build-info.json");
+    try {
+      writeFileSync(writePath, JSON.stringify(buildInfo, null, 2));
+      console.log("[BUILD-INFO] Written to:", writePath);
+    } catch (writeError) {
+      console.warn("[BUILD-INFO] Could not write file:", writeError);
+    }
+    
+    return buildInfo;
   } catch {
     console.log("[BUILD-INFO] Git not available, using fallback");
   }
   
   return {
-    version: commitCount > 0 ? `1.1.${commitCount}` : "1.1.dev",
+    version: "1.1.dev",
     buildDate: now.toISOString().split("T")[0],
     buildTime: now.toISOString(),
-    gitCommit,
+    gitCommit: "unknown",
   };
 }
 
