@@ -35,7 +35,7 @@ All address lookups are tracked in the database, recording address, result type,
 A protected `/admin` panel using Replit Auth for campaign organizers. It features statistics cards for interested/not interested counts and total address searches, a clickable filter system for responses, and separate tabs for detailed responses and address search logs. Both tabs support CSV export.
 
 #### Enhanced FAQ Section with Community Questions
-Combines static and dynamic content with search, category filters, and "New" / "Popular" badges. A "Have More Questions?" chat interface allows users to submit questions, with smart suggestions and rate limiting.
+Combines static and dynamic content with search, category filters, and "New" / "Popular" badges. A "Have More Questions?" chat interface allows users to submit questions, with smart suggestions and rate limiting. FAQ items can include optional `linkTo` properties to deep-link to other tools (e.g., the Tax Estimator from property tax questions).
 
 #### Admin Questions Management
 New admin tabs for managing community questions: "Questions" to view, answer, and publish submitted questions, and "Published FAQs" to manage dynamic FAQs, including adding new ones and tracking view counts.
