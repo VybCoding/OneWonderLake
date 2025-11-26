@@ -80,6 +80,43 @@ A protected `/admin` panel using Replit Auth (OIDC) for campaign organizers. Fea
 - View all address lookups with result type badges and timestamps
 - Export to CSV functionality
 
+#### Enhanced FAQ Section with Community Questions
+A comprehensive FAQ system that combines static and dynamic content:
+
+**Search & Filter Features**:
+- Real-time search input filters FAQs by question and answer content
+- Category tabs (All, General, Taxes, Property Rights, Services) group FAQs by topic
+- "New" badge on FAQs created within the last 7 days
+- "Popular" badge on FAQs with high view counts
+
+**"Have More Questions?" Chat Interface**:
+- Chat-style input at the bottom of the FAQ section
+- Smart suggestions appear as users type, showing matching existing FAQs
+- Click send to open a question submission dialog
+- Submitter provides name, email, optional phone/address, and selects category
+- Rate limiting: 5 submissions per hour per IP to prevent spam
+
+**Dynamic FAQs**:
+- FAQs published from answered community questions appear alongside static FAQs
+- View counts tracked for popularity ranking
+- Category-based organization for easy discovery
+
+#### Admin Questions Management
+New tabs in the admin dashboard for managing community questions:
+
+**Questions Tab**:
+- View all submitted questions organized by status (Pending, Answered, Published)
+- Pending questions shown with amber highlight
+- Click "Answer" to open dialog and provide response
+- Click "Publish to FAQ" to make answered questions public
+- Published questions shown with green checkmark
+
+**Published FAQs Tab**:
+- View all dynamic FAQs created from community questions
+- Add new FAQ directly without a community question
+- Delete FAQs that are no longer relevant
+- View count displayed for each FAQ
+
 #### Campaign Arguments (Mission Pillars)
 Presented as six clickable pillars on the homepage, each with in-depth content in a dialog:
 1. "Bring State Tax Dollars Home"
@@ -116,6 +153,24 @@ The project utilizes a full-stack JavaScript setup:
 - municipalityName (optional text)
 - createdAt (timestamp)
 
+**community_questions table**:
+- id (UUID, primary key)
+- question (text, required)
+- name, email, phone, address (text fields for submitter info)
+- category (general, taxes, property_rights, services)
+- status (pending, answered, published)
+- answer (text, filled by admin)
+- createdAt, answeredAt (timestamps)
+
+**dynamic_faqs table**:
+- id (UUID, primary key)
+- question, answer (text, required)
+- category (general, taxes, property_rights, services)
+- viewCount (integer, default 0)
+- isNew (boolean, computed based on creation date)
+- createdAt (timestamp)
+- questionId (optional reference to community_questions)
+
 ## External Dependencies
 - **Mapping**: OpenStreetMap (tiles for Leaflet)
 - **Geocoding**: OpenStreetMap Nominatim API
@@ -127,6 +182,19 @@ The project utilizes a full-stack JavaScript setup:
 - **Icons**: Lucide React (ThumbsUp, ThumbsDown, RotateCcw, etc.)
 
 ## Recent Updates (November 2025)
+- **Enhanced FAQ System with Community Questions**:
+  - Added search input to filter FAQs by question or answer content
+  - Category tabs (All, General, Taxes, Property Rights, Services) for easy navigation
+  - "New" badge (last 7 days) and "Popular" badge (based on view count) for FAQ discoverability
+  - "Have More Questions?" chat-style input with smart suggestions as users type
+  - Question submission form with category selection and contact information
+  - Rate limiting (5 submissions/hour per IP) to prevent spam
+- **Admin Questions Management**:
+  - New "Questions" tab showing pending/answered/published questions
+  - Answer questions and publish to FAQ with one click
+  - "Published FAQs" tab to manage dynamic FAQs
+  - Create FAQs directly without community questions
+  - View counts tracked for all dynamic FAQs
 - Added dual interest/disinterest tracking with thumbs up/down buttons on BOTH Address Checker and Tax Estimator
 - Renamed admin dashboard to "Community Sentiment Dashboard"
 - Added clickable filter cards for Interested/Not Interested with visual feedback (green/red ring highlights)
