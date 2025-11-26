@@ -1,6 +1,6 @@
 # One Wonder Lake - Civic Advocacy & Annexation Campaign
 
-A data-driven civic advocacy website powered by interactive geospatial analysis, resident interest tracking, and admin dashboard for campaign management.
+A data-driven civic advocacy website powered by interactive geospatial analysis, resident interest tracking, community Q&A, and admin dashboard for campaign management.
 
 ## 🎯 Mission
 
@@ -15,57 +15,27 @@ Unite currently unincorporated neighborhoods—specifically "doughnut hole" isla
 ## ✅ Current Status
 
 ### Completed Features
+
+#### Core Tools
 - **Address Eligibility Checker**: Users enter their address to see if they're inside or outside village boundaries
 - **Interactive Map**: Real-time Leaflet + OpenStreetMap display showing:
   - Official village boundary (GeoJSON-based)
   - Address location markers with zoom-to-marker functionality
   - Map locked at optimal zoom level (scroll-wheel zoom, double-click zoom, touch zoom, and dragging disabled)
   - Visual result indicators (green = resident, yellow = annexation zone)
-- **Property Tax Estimator**: Dedicated calculator page featuring:
+  
+- **Property Tax Estimator** (`/tax-estimator`): Dedicated calculator page featuring:
   - Equalized Assessed Value (EAV) input field
   - Current annual tax bill entry
-  - Post-annexation tax calculation using Village levy rate ($0.2847 per $100 EAV)
+  - Post-annexation tax calculation using Village levy rate
   - Step-by-step guide to finding property info on McHenry County portal
-  - **Tax Breakdown Pinwheel**: Interactive donut chart visualization showing:
-    - Distribution of tax dollars across all taxing bodies (schools, county, township, fire, parks, library, community college, village)
-    - Education total prominently displayed (largest tax burden)
-    - Scrollable category list with always-visible scrollbar for easy browsing
-    - Hover interactions highlighting specific taxing body details
-    - Formatted currency amounts and percentages for each body
-  - Detailed breakdown showing Village levy amount, percentage increase, and monthly impact
-  - Loading animation with calculating state
-  - Auto-scroll to results when calculation completes
-  - Scroll indicator prompting users to view full breakdown
+  - Interactive tax breakdown pinwheel chart
+  - Detailed breakdown showing Village levy amount and monthly impact
+
 - **Precise Geospatial Detection**: Uses official municipal boundary polygon (not mock data)
 - **Responsive Civic Design**: Professional governmental aesthetic, mobile-friendly
-- **Comprehensive FAQ (11 Items)**: Myth-busting answers addressing resident concerns:
-  - LGDF funding benefits and multiplier effects
-  - Force annexation legal reality (65 ILCS 5/7-1-13)
-  - Pre-Annexation Agreements for property protection
-  - Property value impacts of annexation
-  - Property rights and code enforcement
-  - Community policing benefits
-  - Tax implications
-  - Local vs. county government control
-  - Status quo risks and urgency
-  - Current resident benefits
 
-- **Interest Tracking System** ✅ **WORKING**:
-  - Residents can express interest in annexation via dialog forms
-  - Interest form appears in Address Checker (for unincorporated addresses) and Tax Estimator (after calculation)
-  - Collects name, email, address, phone (optional), and notes
-  - All data stored in PostgreSQL database with source tracking
-  - Security features: rate limiting (5 submissions/hour per IP), input validation with length constraints, duplicate email detection
-
-- **Admin Dashboard** (`/admin`) ✅ **FUNCTIONAL**:
-  - Protected access via Replit Auth (Google, GitHub, email/password login)
-  - Admin access controlled via user database flag (granular permission control)
-  - Real-time display of all interested parties with detailed stats
-  - Source breakdown (Address Checker vs Tax Estimator submissions)
-  - Comprehensive table view with contact info, address, notes, and submission date
-  - Campaign organizers can review, search, and export resident interest data
-  - Authorized admins: ddycus@gmail.com, developerdeeks@gmail.com
-
+#### Homepage Features
 - **Benefits Grid**: Six interactive pillar cards explaining annexation advantages:
   - Bring State Tax Dollars Home (LGDF funding)
   - Gain a Voice (Representation & Voting)
@@ -74,6 +44,96 @@ Unite currently unincorporated neighborhoods—specifically "doughnut hole" isla
   - Improve Safety & Services (Policing & Amenities)
   - Golf Cart Freedom (Local Ordinance Benefits)
   - Each card clickable with in-depth content dialog
+
+- **Homepage Call-to-Action Buttons**:
+  - "Check My Address" button links to Address Checker
+  - "Estimate My Taxes" button links to Tax Estimator Tool
+  - Even spacing with icons for visual distinction
+  - Responsive layout (stacks on mobile, side-by-side on desktop)
+
+- **"Have More Questions?" Section**: 
+  - Chat-style input box below the Benefits Grid
+  - Allows residents to ask questions directly on the homepage
+  - Questions automatically save to database for admin review
+  - Opens question submission form with category selection
+  - Rate limiting (5 submissions per hour per IP)
+
+#### Interest & Disinterest Tracking
+- **Dual Sentiment System**: Residents can express BOTH interest AND disinterest in annexation
+- **Two-Button Interface**: Thumbs up ("I'm Interested") and thumbs down ("I'm NOT Interested")
+- **Multiple Submission Points**:
+  - Address Checker (after checking address)
+  - Tax Estimator (after calculation)
+  - Homepage "Have More Questions?" section
+  - Comprehensive FAQ page
+- **Context-Aware Forms**: Appropriate messaging for each sentiment
+- **Database Tracking**: All submissions tracked with source and timestamp
+- **Security Features**: Rate limiting, input validation, duplicate detection
+
+#### Comprehensive FAQ System (`/more-info`)
+- **Static FAQ Items**: 11+ myth-busting answers addressing resident concerns
+- **Dynamic FAQs**: Community-submitted questions published as FAQ items
+- **Search & Filter Features**:
+  - Real-time search input filters FAQs by question and answer content
+  - Category tabs (All, General, Taxes, Property Rights, Services)
+  - "New" badge on FAQs created within last 7 days
+  - "Popular" badge on FAQs with high view counts
+
+- **Community Question Submission**:
+  - Chat-style interface with smart suggestions
+  - Question submission form with category selection
+  - Collects name, email, optional phone/address
+  - Questions saved to database for admin review
+  - Rate limiting: 5 submissions per hour per IP
+
+#### Admin Dashboard (`/admin`)
+**Protected Access**: Replit Auth (Google, GitHub, email/password login)
+
+**Community Sentiment Dashboard - Key Metrics**:
+- **Interested Count**: Total residents interested in annexation
+- **Not Interested Count**: Total residents expressing concerns
+- **Pending Questions**: Community questions awaiting admin response
+- **Published FAQs**: Total dynamic FAQs created from community questions
+- **Address Searches**: Total address lookups performed
+- **From Tax Estimator**: Submissions specifically from tax calculator
+
+**Clickable Stat Cards with Navigation**:
+- Click "Interested" → Filters responses to interested residents + switches to Responses tab
+- Click "Not Interested" → Filters responses to disinterested residents + switches to Responses tab
+- Click "Pending Questions" → Switches to Questions tab
+- Click "Published FAQs" → Switches to Published FAQs tab
+- Click "Address Searches" → Switches to Address Searches tab
+
+**Responses Tab**:
+- Table view with: Name, Email, Address, Interest Status, Phone, Source, Date, Notes
+- Color-coded badges (green "Yes" for interested, red "No" for not interested)
+- Click rows to view full details in dialog
+- CSV export functionality with Interest Status column
+- Filter by Interested/Not Interested with visual ring highlights
+
+**Questions Tab**:
+- View all community questions organized by status:
+  - Pending (amber highlight)
+  - Answered (review-ready)
+  - Published (shown with checkmark)
+- Click "Answer" to respond to questions
+- Edit question text and category before answering
+- Click "Publish to FAQ" to make answered questions public
+- Admin can delete inappropriate questions with confirmation
+
+**Published FAQs Tab**:
+- View all dynamic FAQs from published community questions
+- Add new FAQs directly (without community question)
+- Delete FAQs with confirmation
+- View counts displayed for each FAQ
+- Track FAQ performance and popularity
+
+**Address Searches Tab**:
+- View all address lookups with result type badges
+- Shows: Address, Result Type, Municipality, Date
+- CSV export functionality
+
+---
 
 ### Identified Data Insights
 - **3 unincorporated doughnut holes** identified meeting force-annexation criteria:
@@ -101,14 +161,14 @@ npm run build
 npm start
 ```
 
-The production server automatically binds to `0.0.0.0` and uses the `PORT` environment variable for deployment compatibility. Production startup logs include database initialization diagnostics to help troubleshoot deployment issues.
+The production server automatically binds to `0.0.0.0` and uses the `PORT` environment variable for deployment compatibility.
 
 ## 🏗️ Architecture
 
 ### Tech Stack
 - **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Shadcn/ui
 - **Backend**: Express.js, TypeScript
-- **Database**: PostgreSQL (Neon) with Drizzle ORM ✅ **VERIFIED WORKING**
+- **Database**: PostgreSQL (Neon) with Drizzle ORM
 - **Authentication**: Replit Auth (OIDC) for admin access
 - **Mapping**: Leaflet 4.2.1 + react-leaflet with OpenStreetMap tiles
 - **Geocoding**: OpenStreetMap Nominatim API
@@ -119,45 +179,39 @@ The production server automatically binds to `0.0.0.0` and uses the `PORT` envir
 ```
 client/src/
 ├── components/
-│   ├── AddressChecker.tsx           ← Main tool with map integration + interest form
-│   ├── WonderLakeMap.tsx            ← Interactive Leaflet map (locked zoom)
-│   ├── TaxEstimator.tsx             ← Post-annexation tax calculator + interest form
-│   ├── TaxBreakdownPinwheel.tsx      ← Donut chart visualization of tax distribution
-│   ├── InterestForm.tsx             ← Reusable interest submission dialog
-│   ├── BenefitsGrid.tsx             ← Six pillar cards with click-to-expand dialogs
-│   ├── FAQ.tsx                      ← 11-item persuasive FAQ
-│   ├── Hero.tsx                     ← Campaign hero section
-│   ├── Mission.tsx, Vision.tsx      ← Core messaging
-│   └── Navbar.tsx, Footer.tsx
+│   ├── Hero.tsx                    ← Homepage hero with dual CTA buttons
+│   ├── BenefitsGrid.tsx            ← Six benefit pillars + "Have More Questions?" section
+│   ├── AddressChecker.tsx          ← Main tool with map integration + interest form
+│   ├── WonderLakeMap.tsx           ← Interactive Leaflet map
+│   ├── TaxEstimator.tsx            ← Tax calculator with interest tracking
+│   ├── TaxBreakdownPinwheel.tsx    ← Donut chart visualization
+│   ├── FAQ.tsx                     ← Dynamic FAQ with search/filter
+│   ├── QuestionForm.tsx            ← Question submission dialog with category selection
+│   └── Navbar.tsx, Footer.tsx      ← Navigation components
 ├── data/
-│   ├── village-data.ts         ← Exports official boundary GeoJSON
-│   └── wonder-lake-boundary.json ← Official municipal boundary
+│   ├── village-data.ts             ← Official boundary GeoJSON
+│   └── wonder-lake-boundary.json   ← Municipal boundary
 └── pages/
-    ├── home.tsx                ← Main landing page (Mission, Benefits, Address Check, FAQ, Vision)
-    ├── tax-estimator.tsx       ← Dedicated tax calculator page
-    └── admin.tsx               ← Protected admin dashboard (Replit Auth required)
+    ├── home.tsx                    ← Landing page
+    ├── more-info.tsx               ← FAQ page
+    ├── tax-estimator.tsx           ← Tax calculator page
+    └── admin.tsx                   ← Admin dashboard
 
 server/
-├── routes.ts                   ← API endpoints for address checking, tax estimation, interest submissions, admin data
-├── storage.ts                  ← Database storage interface using Drizzle ORM
-├── db.ts                       ← Database initialization with diagnostic logging
-├── app.ts                      ← Express app setup and middleware
-├── index-dev.ts                ← Development server entry point
-└── index-prod.ts               ← Production server with startup diagnostics
+├── routes.ts                       ← API endpoints
+├── storage.ts                      ← Database interface using Drizzle ORM
+├── db.ts                           ← Database initialization
+└── app.ts                          ← Express app setup
 
 shared/
-└── schema.ts                   ← Drizzle ORM schema definitions and Zod validation schemas
+└── schema.ts                       ← Drizzle ORM schemas + Zod validation
 ```
 
-### Data Flow
-1. User enters address → Nominatim geocodes to coordinates
-2. Turf.js performs point-in-polygon check against boundary
-3. Marker placed on Leaflet map
-4. Result shown visually (color-coded) + text confirmation
-5. If interested, user fills form in dialog → Rate-limited API submission
-6. Data stored in PostgreSQL with IP-based rate limiting and duplicate detection
-7. Admin logs in via Replit Auth, accesses `/admin` dashboard
-8. Admin can view all submissions in real-time with full details
+### Database Schema
+- **interested_parties**: Resident interest submissions with sentiment tracking
+- **searched_addresses**: Address lookup analytics
+- **community_questions**: User-submitted questions (pending, answered, published)
+- **dynamic_faqs**: Published FAQs from community questions or admin-created
 
 ## 📋 Design System
 
@@ -182,55 +236,37 @@ See `design_guidelines.md` for complete specifications.
 ### Phase 4: Legal & Outreach Tools
 - [ ] Pre-Annexation Agreement templates (downloadable)
 - [ ] Advanced "Visualizing the Wallet" comparisons per subdivision
-- [ ] Email campaign integration (Resend)
-
-### Phase 5: Advanced Intelligence
-- [ ] Property Title Integration
-- [ ] Public Meeting Scheduler
-- [ ] Resident testimonial video gallery
+- [ ] Email campaign integration
 
 ## 💾 Database
 
 Uses PostgreSQL (Neon-backed) with Drizzle ORM for:
-- **Interested Parties**: Stores resident interest submissions with contact info, source tracking, and timestamp ✅ **LOGGING CONFIRMED**
-- **Users**: Stores admin user credentials with role/permission flags (isAdmin)
-- **Future expansion**: Can add pledge tracking, event registrations, and campaign metrics
+- **Interested Parties**: Resident interest/disinterest submissions
+- **Searched Addresses**: Address lookup analytics
+- **Community Questions**: User-submitted questions with admin responses
+- **Dynamic FAQs**: Published FAQs from community questions
+- **Users**: Admin credentials with permission flags
 
 ## 🔐 Security & Access Control
 
 ### Admin Access
-- **Authentication**: Replit Auth (Google, GitHub, email/password) protects admin dashboard
+- **Authentication**: Replit Auth protects admin dashboard
 - **Authorization**: Admin access controlled via `isAdmin` database flag
-- **Current Admin Users**: 
-  - ddycus@gmail.com
-  - developerdeeks@gmail.com
+- **Current Admin Users**: ddycus@gmail.com, developerdeeks@gmail.com
 
-### Data Security Features
-- **Rate Limiting**: 5 submissions per IP per hour on interest form endpoint
-- **Input Validation**: Strict length constraints on all form fields (name, email, address, phone, notes)
-- **Duplicate Detection**: Prevents duplicate email submissions, returns helpful message
-- **Dialog Z-index**: Interest form dialog uses z-[9999] to ensure visibility above map
-
-### Production Deployment
-- **Server Binding**: Automatically binds to `0.0.0.0` for Autoscale deployment compatibility
-- **Port Configuration**: Uses `PORT` environment variable (defaults to 5000)
-- **Startup Diagnostics**: Logs database initialization, static files, and server readiness to help troubleshoot deployment issues
-- **Environment Variables**: DATABASE_URL and all secrets properly configured
-
-## 🧪 Testing the Address Checker
-
-Try these Wonder Lake, IL addresses to test:
-- Valid address inside boundary → Green result
-- Address outside boundary → Yellow result  
-- Invalid/non-existent → Error message
+### Data Security
+- **Rate Limiting**: 5 submissions per IP per hour
+- **Input Validation**: Strict length constraints on all form fields
+- **Duplicate Detection**: Prevents duplicate email submissions
+- **Z-index Management**: Ensures all dropdowns appear above dialogs
 
 ## 👥 Contributing
 
-1. Follow the code conventions in existing components (React hooks, Tailwind, Shadcn/ui patterns)
+1. Follow code conventions in existing components (React hooks, Tailwind, Shadcn/ui)
 2. Add `data-testid` attributes to interactive elements
-3. Keep components focused and collapsible where possible
+3. Keep components focused and collapsible
 4. Refer to `design_guidelines.md` for styling standards
-5. All form submissions use Drizzle ORM schema validation via `drizzle-zod`
+5. All form submissions use Drizzle ORM schema validation
 
 ## 📞 Support & Contact
 
@@ -240,23 +276,20 @@ For questions about the campaign or technical implementation, refer to the proje
 
 ## 📝 Navigation Structure
 
-The website uses a hybrid navigation model:
-
 ### Single-Page Sections (Home Route `/`)
 - **Mission**: Campaign core messaging
-- **Benefits**: Six interactive pillar cards (Tax, Representation, Self-Determination, Local Control, Safety, Golf Carts)
-- **Address Check**: Interactive address eligibility checker with live map
-- **FAQ**: 11-item myth-busting accordion
-- All scroll-to-section navigation via navbar
+- **Benefits**: Six interactive pillar cards
+- **"Have More Questions?"**: Direct question submission on homepage
+- **Address Check**: Interactive address eligibility checker with map
+- **FAQ**: Dynamic FAQ with search/filter
 
 ### Dedicated Pages
-- **Tax Estimator** (`/tax-estimator`): Full-page property tax calculation tool with comprehensive breakdown
-- **Admin Dashboard** (`/admin`): Protected admin panel for reviewing interested parties (requires Replit Auth with admin privileges)
-
-Navigation automatically adjusts: scroll links work on home page, page links navigate to dedicated pages.
+- **More Info** (`/more-info`): Comprehensive FAQ page with community questions
+- **Tax Estimator** (`/tax-estimator`): Full-page property tax calculation tool
+- **Admin Dashboard** (`/admin`): Protected admin panel (Replit Auth required)
 
 ---
 
-**Last Updated**: November 26, 2024  
-**Status**: ✅ Production Ready - All Core Features Functional  
-**Current Version**: 4.2 (Tax Breakdown Pinwheel + Interactive Visualization)
+**Last Updated**: November 26, 2025  
+**Status**: ✅ Production Ready - All Features Functional  
+**Current Version**: 5.0 (Enhanced Community Q&A, Admin Navigation, Clickable Metrics)
