@@ -9,7 +9,7 @@ interface NavbarProps {
 
 export default function Navbar({ onNavClick }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
 
   const navItems = [
     { label: "Home", id: "home", type: "link" as const, href: "/" },
@@ -17,6 +17,21 @@ export default function Navbar({ onNavClick }: NavbarProps) {
     { label: "Tax Estimator Tool", id: "tax-estimator", type: "link" as const, href: "/tax-estimator" },
     { label: "More Info", id: "more-info", type: "link" as const, href: "/more-info" },
   ];
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleHomeClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setMobileMenuOpen(false);
+    if (location === "/") {
+      scrollToTop();
+    } else {
+      setLocation("/");
+      setTimeout(() => scrollToTop(), 50);
+    }
+  };
 
   const handleNavClick = (item: typeof navItems[0]) => {
     setMobileMenuOpen(false);
@@ -36,15 +51,30 @@ export default function Navbar({ onNavClick }: NavbarProps) {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex-shrink-0">
-            <Link href="/" className="text-xl font-bold hover:opacity-80 transition-opacity" data-testid="text-logo">
+            <a 
+              href="/" 
+              onClick={handleHomeClick}
+              className="text-xl font-bold hover:opacity-80 transition-opacity cursor-pointer" 
+              data-testid="text-logo"
+            >
               One Wonder Lake
-            </Link>
+            </a>
           </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex md:items-center md:gap-6">
             {navItems.map((item) => (
-              item.type === "link" ? (
+              item.id === "home" ? (
+                <a
+                  key={item.id}
+                  href="/"
+                  onClick={handleHomeClick}
+                  className={`text-primary-foreground hover:text-accent transition-colors px-3 py-2 cursor-pointer ${location === "/" ? "text-accent" : ""}`}
+                  data-testid={`link-nav-${item.id}`}
+                >
+                  {item.label}
+                </a>
+              ) : item.type === "link" ? (
                 <Link
                   key={item.id}
                   href={item.href}
@@ -90,7 +120,17 @@ export default function Navbar({ onNavClick }: NavbarProps) {
         <div className="md:hidden bg-primary border-t border-primary-border">
           <div className="px-4 py-4 space-y-2">
             {navItems.map((item) => (
-              item.type === "link" ? (
+              item.id === "home" ? (
+                <a
+                  key={item.id}
+                  href="/"
+                  onClick={handleHomeClick}
+                  className={`block w-full text-left px-4 py-3 text-primary-foreground hover:bg-accent hover:text-accent-foreground rounded-md transition-colors cursor-pointer ${location === "/" ? "bg-accent/20" : ""}`}
+                  data-testid={`link-mobile-${item.id}`}
+                >
+                  {item.label}
+                </a>
+              ) : item.type === "link" ? (
                 <Link
                   key={item.id}
                   href={item.href}
