@@ -37,13 +37,23 @@ Unite currently unincorporated neighborhoods—specifically "doughnut hole" isla
 
 #### Homepage Features
 - **Benefits Grid**: Six interactive pillar cards explaining annexation advantages:
-  - Bring State Tax Dollars Home (LGDF funding)
+  - Bring State Tax Dollars Home (LGDF & MFT funding)
   - Gain a Voice (Representation & Voting)
   - Define Our Future (Self-Determination)
   - Establish Local Control (Code Enforcement & Rights)
   - Improve Safety & Services (Policing & Amenities)
   - Golf Cart Freedom (Local Ordinance Benefits)
   - Each card clickable with in-depth content dialog
+
+- **Interactive Fund Revenue Calculator** (embedded in "Bring State Tax Dollars Home" popup):
+  - Slider-based calculator for population 1-6,000 residents
+  - Real-time LGDF revenue calculation ($178 per resident/year)
+  - Real-time MFT revenue calculation ($22.50 per resident/year)
+  - Visual progress bars showing proportional revenue growth
+  - Combined total annual revenue display
+  - Detailed LGDF Key Points (Village usage flexibility: operations, public safety, parks, programs)
+  - Detailed MFT Key Points (transportation-restricted: roads, sidewalks, snow removal, signals)
+  - Census timing callout explaining 2030 Census deadline and special census costs ($15-25/household)
 
 - **Homepage Call-to-Action Buttons**:
   - "Check My Address" button links to Address Checker
@@ -181,6 +191,7 @@ client/src/
 ├── components/
 │   ├── Hero.tsx                    ← Homepage hero with dual CTA buttons
 │   ├── BenefitsGrid.tsx            ← Six benefit pillars + "Have More Questions?" section
+│   ├── FundRevenueCalculator.tsx   ← Interactive LGDF/MFT slider calculator
 │   ├── AddressChecker.tsx          ← Main tool with map integration + interest form
 │   ├── WonderLakeMap.tsx           ← Interactive Leaflet map
 │   ├── TaxEstimator.tsx            ← Tax calculator with interest tracking
@@ -292,4 +303,4 @@ For questions about the campaign or technical implementation, refer to the proje
 
 **Last Updated**: November 26, 2025  
 **Status**: ✅ Production Ready - All Features Functional  
-**Current Version**: 5.0 (Enhanced Community Q&A, Admin Navigation, Clickable Metrics)
+**Current Version**: v1.1.134 (Interactive Fund Revenue Calculator, LGDF/MFT Details, Census Timing)
