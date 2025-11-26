@@ -1,6 +1,8 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import { existsSync, readFileSync } from "fs";
 import { execSync } from "child_process";
+import { join } from "path";
 import { randomBytes } from "crypto";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
@@ -10,7 +12,26 @@ function generateUnsubscribeToken(): string {
   return randomBytes(32).toString("hex");
 }
 
-function getBuildInfo(): BuildInfo {
+function loadBuildInfo(): BuildInfo {
+  const possiblePaths = [
+    join(process.cwd(), "build-info.json"),
+    join(process.cwd(), "dist", "build-info.json"),
+    "/home/runner/workspace/build-info.json",
+  ];
+  
+  for (const buildInfoPath of possiblePaths) {
+    try {
+      if (existsSync(buildInfoPath)) {
+        const content = readFileSync(buildInfoPath, "utf-8");
+        const parsed = JSON.parse(content);
+        console.log("[BUILD-INFO] Loaded from file:", buildInfoPath, parsed);
+        return parsed as BuildInfo;
+      }
+    } catch (error) {
+      console.warn("[BUILD-INFO] Could not load from", buildInfoPath, ":", error);
+    }
+  }
+  
   const now = new Date();
   let gitCommit = "unknown";
   let commitCount = 0;
@@ -18,18 +39,20 @@ function getBuildInfo(): BuildInfo {
   try {
     gitCommit = execSync("git rev-parse --short HEAD").toString().trim();
     commitCount = parseInt(execSync("git rev-list --count HEAD").toString().trim(), 10);
+    console.log("[BUILD-INFO] Generated from git:", { version: `1.1.${commitCount}`, gitCommit });
   } catch {
+    console.log("[BUILD-INFO] Git not available, using fallback");
   }
   
   return {
-    version: `1.1.${commitCount}`,
+    version: commitCount > 0 ? `1.1.${commitCount}` : "1.1.dev",
     buildDate: now.toISOString().split("T")[0],
     buildTime: now.toISOString(),
     gitCommit,
   };
 }
 
-const BUILD_INFO = getBuildInfo();
+const BUILD_INFO = loadBuildInfo();
 
 const submissionCounts = new Map<string, { count: number; firstSubmission: number }>();
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
