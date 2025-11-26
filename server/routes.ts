@@ -1,9 +1,14 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { execSync } from "child_process";
+import { randomBytes } from "crypto";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertInterestedPartySchema, insertSearchedAddressSchema, insertCommunityQuestionSchema, insertDynamicFaqSchema, type BuildInfo } from "@shared/schema";
+
+function generateUnsubscribeToken(): string {
+  return randomBytes(32).toString("hex");
+}
 
 function getBuildInfo(): BuildInfo {
   const now = new Date();
@@ -359,7 +364,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const party = await storage.createInterestedParty(data);
+      // Generate unsubscribe token for privacy compliance
+      const unsubscribeToken = generateUnsubscribeToken();
+      const party = await storage.createInterestedParty({
+        ...data,
+        unsubscribeToken,
+      });
 
       // NOTE: Email sending is not configured. 
       // To enable thank-you emails, set up Resend or another email service integration.
@@ -444,7 +454,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const data = validationResult.data;
-      const question = await storage.createCommunityQuestion(data);
+      
+      // Generate unsubscribe token for privacy compliance
+      const unsubscribeToken = generateUnsubscribeToken();
+      const question = await storage.createCommunityQuestion({
+        ...data,
+        unsubscribeToken,
+      });
 
       res.status(201).json({ 
         success: true,
@@ -630,6 +646,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Build info endpoint - returns version and build timestamp
   app.get("/api/build-info", (_req: Request, res: Response) => {
     res.json(BUILD_INFO);
+  });
+
+  // Unsubscribe endpoint - allows users to opt out of communications
+  app.post("/api/unsubscribe", async (req: Request, res: Response) => {
+    try {
+      const { token, type } = req.body;
+      
+      if (!token || typeof token !== "string") {
+        return res.status(400).json({ error: "Invalid unsubscribe token" });
+      }
+
+      if (!type || !["interested", "question"].includes(type)) {
+        return res.status(400).json({ error: "Invalid unsubscribe type" });
+      }
+
+      let success = false;
+      if (type === "interested") {
+        success = await storage.unsubscribeParty(token);
+      } else if (type === "question") {
+        success = await storage.unsubscribeQuestion(token);
+      }
+
+      if (!success) {
+        return res.status(404).json({ 
+          error: "Subscription not found",
+          message: "This unsubscribe link may have already been used or is invalid." 
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        message: "You have been successfully unsubscribed from our communications." 
+      });
+    } catch (error) {
+      console.error("Error processing unsubscribe:", error);
+      res.status(500).json({ error: "Failed to process unsubscribe request" });
+    }
+  });
+
+  // Validate unsubscribe token - check if token is valid without actually unsubscribing
+  app.get("/api/unsubscribe/validate", async (req: Request, res: Response) => {
+    try {
+      const { token, type } = req.query;
+      
+      if (!token || typeof token !== "string") {
+        return res.status(400).json({ valid: false, error: "Invalid token" });
+      }
+
+      if (!type || !["interested", "question"].includes(type as string)) {
+        return res.status(400).json({ valid: false, error: "Invalid type" });
+      }
+
+      let record = null;
+      if (type === "interested") {
+        record = await storage.getInterestedPartyByToken(token);
+      } else if (type === "question") {
+        record = await storage.getCommunityQuestionByToken(token);
+      }
+
+      if (!record) {
+        return res.json({ valid: false, alreadyUnsubscribed: false });
+      }
+
+      res.json({ 
+        valid: true, 
+        alreadyUnsubscribed: record.unsubscribed ?? false,
+        email: record.email.replace(/(.{2}).*(@.*)/, "$1***$2") // Mask email for privacy
+      });
+    } catch (error) {
+      console.error("Error validating unsubscribe token:", error);
+      res.status(500).json({ valid: false, error: "Failed to validate token" });
+    }
   });
 
   const httpServer = createServer(app);

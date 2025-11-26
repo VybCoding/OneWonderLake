@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest } from "@/lib/queryClient";
 
 const questionFormSchema = z.object({
@@ -36,6 +37,9 @@ const questionFormSchema = z.object({
   address: z.string().optional(),
   phone: z.string().optional(),
   category: z.enum(["general", "taxes", "property_rights", "services"]),
+  contactConsent: z.boolean().refine(val => val === true, {
+    message: "You must consent to be contacted to submit this form"
+  }),
 });
 
 type QuestionFormValues = z.infer<typeof questionFormSchema>;
@@ -70,6 +74,7 @@ export default function QuestionForm({
       address: "",
       phone: "",
       category: "general",
+      contactConsent: false,
     },
   });
 
@@ -249,6 +254,33 @@ export default function QuestionForm({
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="contactConsent"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-muted/30">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="checkbox-question-consent"
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="text-sm font-normal cursor-pointer">
+                        I consent to be contacted regarding my question and annexation updates. *
+                      </FormLabel>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              <div className="text-xs text-muted-foreground bg-muted/20 rounded p-3 space-y-1">
+                <p className="font-medium">Privacy Notice:</p>
+                <p>Your information will not be sold or provided to any third party. We will only use your contact information to respond to your question and share annexation updates. You may unsubscribe at any time.</p>
+              </div>
 
               <div className="flex gap-3 pt-2">
                 <Button

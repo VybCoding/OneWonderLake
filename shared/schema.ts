@@ -42,12 +42,17 @@ export const interestedParties = pgTable("interested_parties", {
   source: varchar("source").notNull(), // 'address_checker' or 'tax_estimator'
   interested: boolean("interested").notNull().default(true), // true = interested in annexation, false = not interested
   emailSent: boolean("email_sent").default(false),
+  contactConsent: boolean("contact_consent").notNull().default(false), // User consented to be contacted
+  unsubscribed: boolean("unsubscribed").default(false), // User has unsubscribed from communications
+  unsubscribeToken: varchar("unsubscribe_token"), // Secure token for unsubscribe link
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertInterestedPartySchema = createInsertSchema(interestedParties).omit({
   id: true,
   emailSent: true,
+  unsubscribed: true,
+  unsubscribeToken: true,
   createdAt: true,
 }).extend({
   name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
@@ -60,6 +65,9 @@ export const insertInterestedPartySchema = createInsertSchema(interestedParties)
     invalid_type_error: "Invalid source" 
   }),
   interested: z.boolean().default(true),
+  contactConsent: z.boolean().refine(val => val === true, {
+    message: "You must consent to be contacted to submit this form"
+  }),
 });
 
 export type InsertInterestedParty = z.infer<typeof insertInterestedPartySchema>;
@@ -103,6 +111,9 @@ export const communityQuestions = pgTable("community_questions", {
   category: varchar("category").notNull().default("general"),
   status: varchar("status").notNull().default("pending"),
   answer: text("answer"),
+  contactConsent: boolean("contact_consent").notNull().default(false), // User consented to be contacted
+  unsubscribed: boolean("unsubscribed").default(false), // User has unsubscribed from communications
+  unsubscribeToken: varchar("unsubscribe_token"), // Secure token for unsubscribe link
   createdAt: timestamp("created_at").defaultNow(),
   answeredAt: timestamp("answered_at"),
 });
@@ -111,6 +122,8 @@ export const insertCommunityQuestionSchema = createInsertSchema(communityQuestio
   id: true,
   status: true,
   answer: true,
+  unsubscribed: true,
+  unsubscribeToken: true,
   createdAt: true,
   answeredAt: true,
 }).extend({
@@ -120,6 +133,9 @@ export const insertCommunityQuestionSchema = createInsertSchema(communityQuestio
   address: z.string().max(500, "Address is too long").optional().or(z.literal("")),
   phone: z.string().max(20, "Phone number is too long").optional().or(z.literal("")),
   category: z.enum(questionCategories).default("general"),
+  contactConsent: z.boolean().refine(val => val === true, {
+    message: "You must consent to be contacted to submit this form"
+  }),
 });
 
 export type InsertCommunityQuestion = z.infer<typeof insertCommunityQuestionSchema>;

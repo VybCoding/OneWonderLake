@@ -25,22 +25,26 @@ export interface IStorage {
   upsertUser(user: UpsertUser): Promise<User>;
   
   // Interested parties operations
-  createInterestedParty(party: InsertInterestedParty): Promise<InterestedParty>;
+  createInterestedParty(party: InsertInterestedParty & { unsubscribeToken: string }): Promise<InterestedParty>;
   getInterestedParties(): Promise<InterestedParty[]>;
   getInterestedPartyByEmail(email: string): Promise<InterestedParty | undefined>;
+  getInterestedPartyByToken(token: string): Promise<InterestedParty | undefined>;
   markEmailSent(id: string): Promise<void>;
+  unsubscribeParty(token: string): Promise<boolean>;
   
   // Searched addresses operations
   createSearchedAddress(address: InsertSearchedAddress): Promise<SearchedAddress>;
   getSearchedAddresses(): Promise<SearchedAddress[]>;
   
   // Community questions operations
-  createCommunityQuestion(question: InsertCommunityQuestion): Promise<CommunityQuestion>;
+  createCommunityQuestion(question: InsertCommunityQuestion & { unsubscribeToken: string }): Promise<CommunityQuestion>;
   getCommunityQuestions(): Promise<CommunityQuestion[]>;
   getCommunityQuestionById(id: string): Promise<CommunityQuestion | undefined>;
+  getCommunityQuestionByToken(token: string): Promise<CommunityQuestion | undefined>;
   answerCommunityQuestion(id: string, answer: string, editedQuestion?: string, editedCategory?: string): Promise<CommunityQuestion | undefined>;
   deleteCommunityQuestion(id: string): Promise<void>;
   publishQuestionToFaq(id: string): Promise<DynamicFaq | undefined>;
+  unsubscribeQuestion(token: string): Promise<boolean>;
   
   // Dynamic FAQs operations
   getDynamicFaqs(): Promise<DynamicFaq[]>;
@@ -73,7 +77,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Interested parties operations
-  async createInterestedParty(party: InsertInterestedParty): Promise<InterestedParty> {
+  async createInterestedParty(party: InsertInterestedParty & { unsubscribeToken: string }): Promise<InterestedParty> {
     const [newParty] = await db
       .insert(interestedParties)
       .values(party)
@@ -96,11 +100,28 @@ export class DatabaseStorage implements IStorage {
     return party;
   }
 
+  async getInterestedPartyByToken(token: string): Promise<InterestedParty | undefined> {
+    const [party] = await db
+      .select()
+      .from(interestedParties)
+      .where(eq(interestedParties.unsubscribeToken, token));
+    return party;
+  }
+
   async markEmailSent(id: string): Promise<void> {
     await db
       .update(interestedParties)
       .set({ emailSent: true })
       .where(eq(interestedParties.id, id));
+  }
+
+  async unsubscribeParty(token: string): Promise<boolean> {
+    const result = await db
+      .update(interestedParties)
+      .set({ unsubscribed: true })
+      .where(eq(interestedParties.unsubscribeToken, token))
+      .returning();
+    return result.length > 0;
   }
 
   // Searched addresses operations
@@ -120,7 +141,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Community questions operations
-  async createCommunityQuestion(question: InsertCommunityQuestion): Promise<CommunityQuestion> {
+  async createCommunityQuestion(question: InsertCommunityQuestion & { unsubscribeToken: string }): Promise<CommunityQuestion> {
     const [newQuestion] = await db
       .insert(communityQuestions)
       .values(question)
@@ -141,6 +162,23 @@ export class DatabaseStorage implements IStorage {
       .from(communityQuestions)
       .where(eq(communityQuestions.id, id));
     return question;
+  }
+
+  async getCommunityQuestionByToken(token: string): Promise<CommunityQuestion | undefined> {
+    const [question] = await db
+      .select()
+      .from(communityQuestions)
+      .where(eq(communityQuestions.unsubscribeToken, token));
+    return question;
+  }
+
+  async unsubscribeQuestion(token: string): Promise<boolean> {
+    const result = await db
+      .update(communityQuestions)
+      .set({ unsubscribed: true })
+      .where(eq(communityQuestions.unsubscribeToken, token))
+      .returning();
+    return result.length > 0;
   }
 
   async answerCommunityQuestion(id: string, answer: string, editedQuestion?: string, editedCategory?: string): Promise<CommunityQuestion | undefined> {

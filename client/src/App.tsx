@@ -7,6 +7,7 @@ import Home from "@/pages/home";
 import TaxEstimatorPage from "@/pages/tax-estimator";
 import MoreInfoPage from "@/pages/more-info";
 import AdminPage from "@/pages/admin";
+import UnsubscribePage from "@/pages/unsubscribe";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -16,6 +17,7 @@ function Router() {
       <Route path="/tax-estimator" component={TaxEstimatorPage} />
       <Route path="/more-info" component={MoreInfoPage} />
       <Route path="/admin" component={AdminPage} />
+      <Route path="/unsubscribe" component={UnsubscribePage} />
       <Route component={NotFound} />
     </Switch>
   );
