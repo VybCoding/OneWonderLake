@@ -84,6 +84,7 @@ export default function AdminPage() {
   const [selectedQuestion, setSelectedQuestion] = useState<CommunityQuestion | null>(null);
   const [answerText, setAnswerText] = useState("");
   const [showNewFaqDialog, setShowNewFaqDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState("responses");
   const [newFaqQuestion, setNewFaqQuestion] = useState("");
   const [newFaqAnswer, setNewFaqAnswer] = useState("");
   const [newFaqCategory, setNewFaqCategory] = useState("general");
@@ -459,10 +460,7 @@ export default function AdminPage() {
 
           <Card 
             className="cursor-pointer transition-all hover-elevate"
-            onClick={() => {
-              const questionsTab = document.querySelector('[value="questions"]');
-              if (questionsTab) questionsTab.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-            }}
+            onClick={() => setActiveTab("questions")}
             data-testid="card-filter-pending"
           >
             <CardHeader className="pb-2">
@@ -521,7 +519,7 @@ export default function AdminPage() {
           </Card>
         </div>
 
-        <Tabs defaultValue="responses" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger value="responses" className="flex items-center gap-2">
               <Users className="w-4 h-4" />

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link } from "wouter";
 import { Home, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -5,8 +6,12 @@ import FAQ from "@/components/FAQ";
 import Navbar from "@/components/Navbar";
 
 export default function MoreInfoPage() {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-background" id="top">
+    <div className="min-h-screen bg-background">
       <Navbar />
       
       <FAQ />

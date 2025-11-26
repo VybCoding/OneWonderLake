@@ -18,7 +18,7 @@ export default function QuestionsCTA() {
             Explore our comprehensive FAQ section to find answers about annexation, property rights, taxes, and village services. Can't find what you're looking for? Ask us directly.
           </p>
           <Button asChild className="gap-2" data-testid="button-questions-cta">
-            <Link href="/more-info#top">
+            <Link href="/more-info">
               Explore More Info
               <ArrowRight className="w-4 h-4" />
             </Link>
