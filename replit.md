@@ -205,3 +205,9 @@ The project utilizes a full-stack JavaScript setup:
 - Added animated loading state with bouncing dots during address lookups
 - Tax Estimator tool now displays both "I'm Interested" and "I'm NOT Interested" buttons after tax calculation
 - Database cleared and ready for live data collection
+- **Automatic Version Tracking**:
+  - Footer now displays version based on git commit count: v1.1.{commit_count}
+  - Shows git commit hash for traceability
+  - Shows server start date (when app was deployed/restarted)
+  - Version fetched from `/api/build-info` endpoint computed at server startup
+  - Format: `v1.1.118 (70decca) - 2025-11-26`
