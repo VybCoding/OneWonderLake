@@ -144,6 +144,9 @@ The project utilizes a full-stack JavaScript setup:
 - name, email, phone, address, notes (text fields)
 - source (address_checker or tax_estimator)
 - interested (boolean - true for interested, false for not interested)
+- contactConsent (boolean - explicit consent for communications, required)
+- unsubscribed (boolean - true if user opted out of communications)
+- unsubscribeToken (varchar - secure token for unsubscribe link)
 - createdAt (timestamp)
 
 **searched_addresses table**:
@@ -160,6 +163,9 @@ The project utilizes a full-stack JavaScript setup:
 - category (general, taxes, property_rights, services)
 - status (pending, answered, published)
 - answer (text, filled by admin)
+- contactConsent (boolean - explicit consent for communications, required)
+- unsubscribed (boolean - true if user opted out of communications)
+- unsubscribeToken (varchar - secure token for unsubscribe link)
 - createdAt, answeredAt (timestamps)
 
 **dynamic_faqs table**:
@@ -211,3 +217,11 @@ The project utilizes a full-stack JavaScript setup:
   - Shows server start date (when app was deployed/restarted)
   - Version fetched from `/api/build-info` endpoint computed at server startup
   - Format: `v1.1.118 (70decca) - 2025-11-26`
+- **Privacy & Consent Compliance (Issue #22)**:
+  - All forms (InterestForm, QuestionForm) now require explicit consent checkbox before submission
+  - Privacy notice: "Your information will not be sold or provided to any third party"
+  - Secure unsubscribe system with cryptographic tokens (crypto.randomBytes(32))
+  - Dedicated /unsubscribe page accessible via email links with token validation
+  - Footer displays Privacy Commitment section with shield icon
+  - Database tracks contactConsent, unsubscribed status, and unsubscribeToken for both interested parties and community questions
+  - Unsubscribe API endpoints: GET /api/unsubscribe/validate and POST /api/unsubscribe
