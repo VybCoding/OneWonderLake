@@ -240,6 +240,27 @@ export default function AdminPage() {
     },
   });
 
+  const deleteQuestionMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("DELETE", `/api/admin/questions/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/questions"] });
+      toast({
+        title: "Question Deleted",
+        description: "The question has been removed.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete the question. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     if (partiesError && isUnauthorizedError(partiesError as Error)) {
       toast({
@@ -792,19 +813,34 @@ export default function AdminPage() {
                                       </Badge>
                                     </div>
                                   </div>
-                                  <Button
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedQuestion(q);
-                                      setAnswerText(q.answer || "");
-                                      setEditedQuestionText(q.question);
-                                      setEditedCategory(q.category);
-                                    }}
-                                    data-testid={`button-answer-${q.id}`}
-                                  >
-                                    <Send className="w-4 h-4 mr-2" />
-                                    Answer
-                                  </Button>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedQuestion(q);
+                                        setAnswerText(q.answer || "");
+                                        setEditedQuestionText(q.question);
+                                        setEditedCategory(q.category);
+                                      }}
+                                      data-testid={`button-answer-${q.id}`}
+                                    >
+                                      <Send className="w-4 h-4 mr-2" />
+                                      Answer
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        if (confirm("Are you sure you want to delete this question?")) {
+                                          deleteQuestionMutation.mutate(q.id);
+                                        }
+                                      }}
+                                      disabled={deleteQuestionMutation.isPending}
+                                      data-testid={`button-delete-question-${q.id}`}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
                                 </div>
                               </CardContent>
                             </Card>
@@ -858,6 +894,19 @@ export default function AdminPage() {
                                     >
                                       <BookOpen className="w-4 h-4 mr-2" />
                                       Publish to FAQ
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        if (confirm("Are you sure you want to delete this question?")) {
+                                          deleteQuestionMutation.mutate(q.id);
+                                        }
+                                      }}
+                                      disabled={deleteQuestionMutation.isPending}
+                                      data-testid={`button-delete-question-${q.id}`}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
                                     </Button>
                                   </div>
                                 </div>

@@ -39,6 +39,7 @@ export interface IStorage {
   getCommunityQuestions(): Promise<CommunityQuestion[]>;
   getCommunityQuestionById(id: string): Promise<CommunityQuestion | undefined>;
   answerCommunityQuestion(id: string, answer: string, editedQuestion?: string, editedCategory?: string): Promise<CommunityQuestion | undefined>;
+  deleteCommunityQuestion(id: string): Promise<void>;
   publishQuestionToFaq(id: string): Promise<DynamicFaq | undefined>;
   
   // Dynamic FAQs operations
@@ -163,6 +164,12 @@ export class DatabaseStorage implements IStorage {
       .where(eq(communityQuestions.id, id))
       .returning();
     return updated;
+  }
+
+  async deleteCommunityQuestion(id: string): Promise<void> {
+    await db
+      .delete(communityQuestions)
+      .where(eq(communityQuestions.id, id));
   }
 
   async publishQuestionToFaq(id: string): Promise<DynamicFaq | undefined> {

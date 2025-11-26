@@ -12,8 +12,7 @@ export default function Navbar({ onNavClick }: NavbarProps) {
   const [location] = useLocation();
 
   const navItems = [
-    { label: "Mission", id: "mission", type: "scroll" as const },
-    { label: "Benefits", id: "benefits", type: "scroll" as const },
+    { label: "Home", id: "home", type: "link" as const, href: "/" },
     { label: "Address Checker", id: "address", type: "scroll" as const },
     { label: "Tax Estimator Tool", id: "tax-estimator", type: "link" as const, href: "/tax-estimator" },
     { label: "More Info", id: "more-info", type: "link" as const, href: "/more-info" },
