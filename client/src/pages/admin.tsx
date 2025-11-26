@@ -457,21 +457,14 @@ export default function AdminPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Address Searches</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <Search className="w-5 h-5 text-primary" />
-                <span className="text-3xl font-bold" data-testid="text-total-searches">
-                  {searchedAddresses?.length || 0}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
+          <Card 
+            className="cursor-pointer transition-all hover-elevate"
+            onClick={() => {
+              const questionsTab = document.querySelector('[value="questions"]');
+              if (questionsTab) questionsTab.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            }}
+            data-testid="card-filter-pending"
+          >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Pending Questions</CardTitle>
             </CardHeader>
@@ -494,6 +487,20 @@ export default function AdminPage() {
                 <BookOpen className="w-5 h-5 text-primary" />
                 <span className="text-3xl font-bold" data-testid="text-published-faqs">
                   {dynamicFaqs?.length || 0}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Address Searches</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <Search className="w-5 h-5 text-primary" />
+                <span className="text-3xl font-bold" data-testid="text-total-searches">
+                  {searchedAddresses?.length || 0}
                 </span>
               </div>
             </CardContent>
