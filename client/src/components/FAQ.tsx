@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Send, TrendingUp, Sparkles, MessageCircleQuestion } from "lucide-react";
+import { Link } from "wouter";
+import { Search, Send, TrendingUp, Sparkles, MessageCircleQuestion, ArrowRight } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -21,6 +22,10 @@ interface StaticFaq {
   answer: string;
   category: "general" | "taxes" | "property_rights" | "services";
   hasCalculator?: boolean;
+  linkTo?: {
+    text: string;
+    url: string;
+  };
 }
 
 const staticFaqs: StaticFaq[] = [
@@ -69,8 +74,12 @@ const staticFaqs: StaticFaq[] = [
   {
     question: "Will my property taxes increase?",
     answer:
-      "The goal is to use LGDF funds from state income taxes to improve infrastructure without raising property taxes. Annexation brings new revenue streams that currently go to the state.",
+      "Annexation does add a small Village levy to your property taxes. However, Wonder Lake's levy rate is one of the lowest in McHenry County. To see exactly how annexation would affect your specific property taxes, we recommend using our Tax Estimator tool.",
     category: "taxes",
+    linkTo: {
+      text: "Try the Tax Estimator",
+      url: "/tax-estimator",
+    },
   },
   {
     question: "Why do we need Village police?",
@@ -117,6 +126,10 @@ interface CombinedFaq {
   viewCount?: number;
   isDynamic?: boolean;
   hasCalculator?: boolean;
+  linkTo?: {
+    text: string;
+    url: string;
+  };
 }
 
 export default function FAQ() {
@@ -138,6 +151,7 @@ export default function FAQ() {
       category: faq.category,
       isDynamic: false,
       hasCalculator: faq.hasCalculator,
+      linkTo: faq.linkTo,
     }));
 
     const dynamicItems: CombinedFaq[] = dynamicFaqs.map((faq) => ({
@@ -259,6 +273,16 @@ export default function FAQ() {
       </AccordionTrigger>
       <AccordionContent className="text-muted-foreground leading-relaxed">
         <p className="mb-4">{faq.answer}</p>
+        {faq.linkTo && (
+          <Link
+            href={faq.linkTo.url}
+            className="inline-flex items-center gap-2 text-primary hover:underline font-medium mb-4"
+            data-testid={`link-faq-${faq.id}`}
+          >
+            {faq.linkTo.text}
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        )}
         {faq.hasCalculator && (
           <div className="mt-4" data-testid="faq-calculator">
             <FundRevenueCalculator />
