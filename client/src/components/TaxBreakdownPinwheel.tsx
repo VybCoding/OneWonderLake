@@ -183,7 +183,7 @@ export default function TaxBreakdownPinwheel({
               <p className="text-xs text-muted-foreground">Schools are the largest portion of your property taxes</p>
             </div>
 
-            <div className="space-y-2 max-h-[240px] overflow-y-auto pr-2">
+            <div className="space-y-2 max-h-[240px] overflow-y-scroll pr-2">
               {chartData.map((body) => {
                 const Icon = ICON_MAP[body.id] || Building2;
                 const isVillage = body.id === "village";
