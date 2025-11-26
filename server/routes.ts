@@ -682,6 +682,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin map data endpoint - returns coordinates for interested, not interested, and no-preference addresses
+  app.get("/api/admin/map-data", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Get all interested parties with coordinates
+      const parties = await storage.getInterestedParties();
+      const interestedPins = parties
+        .filter(p => p.latitude && p.longitude && p.interested === true)
+        .map(p => ({
+          id: p.id,
+          latitude: p.latitude,
+          longitude: p.longitude,
+          address: p.address,
+          name: p.name,
+          type: "interested" as const,
+          date: p.createdAt,
+        }));
+
+      const notInterestedPins = parties
+        .filter(p => p.latitude && p.longitude && p.interested === false)
+        .map(p => ({
+          id: p.id,
+          latitude: p.latitude,
+          longitude: p.longitude,
+          address: p.address,
+          name: p.name,
+          type: "not_interested" as const,
+          date: p.createdAt,
+        }));
+
+      // Get all searched addresses
+      const searchedAddrs = await storage.getSearchedAddresses();
+      
+      // Get set of addresses that have an interested party submission (case-insensitive)
+      const partyAddresses = new Set(
+        parties.map(p => p.address.toLowerCase().trim())
+      );
+
+      // Filter searched addresses that don't have a matching interested party
+      const noPreferencePins = searchedAddrs
+        .filter(s => 
+          s.latitude && 
+          s.longitude && 
+          !partyAddresses.has(s.address.toLowerCase().trim())
+        )
+        .map(s => ({
+          id: s.id,
+          latitude: s.latitude,
+          longitude: s.longitude,
+          address: s.address,
+          type: "no_preference" as const,
+          result: s.result,
+          date: s.createdAt,
+        }));
+
+      res.json({
+        interested: interestedPins,
+        notInterested: notInterestedPins,
+        noPreference: noPreferencePins,
+        summary: {
+          interested: interestedPins.length,
+          notInterested: notInterestedPins.length,
+          noPreference: noPreferencePins.length,
+          total: interestedPins.length + notInterestedPins.length + noPreferencePins.length,
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching map data:", error);
+      res.status(500).json({ error: "Failed to fetch map data" });
+    }
+  });
+
   // Build info endpoint - returns version and build timestamp
   app.get("/api/build-info", (_req: Request, res: Response) => {
     res.json(BUILD_INFO);

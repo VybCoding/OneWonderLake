@@ -630,12 +630,16 @@ export default function AddressChecker() {
                 prefillAddress={address}
                 interested={true}
                 buttonClassName="bg-yellow-700 hover:bg-yellow-800 text-white"
+                latitude={markerPosition ? markerPosition[0].toString() : undefined}
+                longitude={markerPosition ? markerPosition[1].toString() : undefined}
               />
               <InterestForm 
                 source="address_checker" 
                 prefillAddress={address}
                 interested={false}
                 buttonClassName="bg-gray-600 hover:bg-gray-700 text-white"
+                latitude={markerPosition ? markerPosition[0].toString() : undefined}
+                longitude={markerPosition ? markerPosition[1].toString() : undefined}
               />
             </div>
           </div>

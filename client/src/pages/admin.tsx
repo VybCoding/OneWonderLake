@@ -27,7 +27,8 @@ import {
   Check,
   BookOpen,
   Sparkles,
-  Trash2
+  Trash2,
+  Map
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -60,6 +61,30 @@ import {
 } from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { InterestedParty, SearchedAddress, CommunityQuestion, DynamicFaq } from "@shared/schema";
+import AdminMap from "@/components/AdminMap";
+
+interface MapPin {
+  id: string;
+  latitude: string;
+  longitude: string;
+  address: string;
+  name?: string;
+  type: 'interested' | 'not_interested' | 'no_preference';
+  result?: string;
+  date?: string;
+}
+
+interface MapData {
+  interested: MapPin[];
+  notInterested: MapPin[];
+  noPreference: MapPin[];
+  summary: {
+    interested: number;
+    notInterested: number;
+    noPreference: number;
+    total: number;
+  };
+}
 
 const categoryLabels: Record<string, string> = {
   general: "General",
@@ -143,6 +168,15 @@ export default function AdminPage() {
     isLoading: faqsLoading,
   } = useQuery<DynamicFaq[]>({
     queryKey: ["/api/dynamic-faqs"],
+    enabled: isAuthenticated && adminCheck?.isAdmin,
+    retry: false,
+  });
+
+  const { 
+    data: mapData, 
+    isLoading: mapLoading,
+  } = useQuery<MapData>({
+    queryKey: ["/api/admin/map-data"],
     enabled: isAuthenticated && adminCheck?.isAdmin,
     retry: false,
   });
@@ -586,6 +620,10 @@ export default function AdminPage() {
             <TabsTrigger value="searches" className="flex items-center gap-2">
               <Search className="w-4 h-4" />
               Address Searches ({searchedAddresses?.length || 0})
+            </TabsTrigger>
+            <TabsTrigger value="map" className="flex items-center gap-2" data-testid="tab-map">
+              <Map className="w-4 h-4" />
+              Map
             </TabsTrigger>
           </TabsList>
 
@@ -1149,6 +1187,13 @@ export default function AdminPage() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="map" data-testid="tab-content-map">
+            <AdminMap 
+              data={mapData || { interested: [], notInterested: [], noPreference: [], summary: { interested: 0, notInterested: 0, noPreference: 0, total: 0 } }} 
+              isLoading={mapLoading} 
+            />
           </TabsContent>
         </Tabs>
 

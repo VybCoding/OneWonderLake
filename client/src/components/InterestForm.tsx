@@ -45,6 +45,8 @@ interface InterestFormProps {
   buttonSize?: "default" | "sm" | "lg";
   buttonClassName?: string;
   interested?: boolean; // true = interested in annexation, false = not interested
+  latitude?: string; // Geocoded latitude for map display
+  longitude?: string; // Geocoded longitude for map display
 }
 
 export default function InterestForm({
@@ -54,6 +56,8 @@ export default function InterestForm({
   buttonSize = "default",
   buttonClassName = "",
   interested = true,
+  latitude,
+  longitude,
 }: InterestFormProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "duplicate" | "ratelimit" | "error">("idle");
@@ -82,6 +86,8 @@ export default function InterestForm({
         ...data,
         source,
         interested,
+        latitude: latitude || "",
+        longitude: longitude || "",
       });
       return response.json();
     },

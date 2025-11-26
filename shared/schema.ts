@@ -41,6 +41,8 @@ export const interestedParties = pgTable("interested_parties", {
   notes: text("notes"),
   source: varchar("source").notNull(), // 'address_checker' or 'tax_estimator'
   interested: boolean("interested").notNull().default(true), // true = interested in annexation, false = not interested
+  latitude: varchar("latitude"), // Geocoded latitude for map display
+  longitude: varchar("longitude"), // Geocoded longitude for map display
   emailSent: boolean("email_sent").default(false),
   contactConsent: boolean("contact_consent").notNull().default(false), // User consented to be contacted
   unsubscribed: boolean("unsubscribed").default(false), // User has unsubscribed from communications
@@ -65,6 +67,8 @@ export const insertInterestedPartySchema = createInsertSchema(interestedParties)
     invalid_type_error: "Invalid source" 
   }),
   interested: z.boolean().default(true),
+  latitude: z.string().optional().or(z.literal("")),
+  longitude: z.string().optional().or(z.literal("")),
   contactConsent: z.boolean().refine(val => val === true, {
     message: "You must consent to be contacted to submit this form"
   }),
