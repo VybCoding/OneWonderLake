@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DollarSign, Vote, Compass, ShieldCheck, Users, Navigation } from "lucide-react";
+import { DollarSign, Vote, Compass, ShieldCheck, Users, Navigation, HelpCircle, Send } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Dialog,
@@ -9,6 +9,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import QuestionForm from "@/components/QuestionForm";
 
 interface Benefit {
   icon: typeof DollarSign;
@@ -153,6 +155,20 @@ const benefits: Benefit[] = [
 
 export default function BenefitsGrid() {
   const [selectedBenefit, setSelectedBenefit] = useState<Benefit | null>(null);
+  const [questionInput, setQuestionInput] = useState("");
+  const [showQuestionForm, setShowQuestionForm] = useState(false);
+
+  const handleAskQuestion = () => {
+    if (questionInput.trim().length >= 10) {
+      setShowQuestionForm(true);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && questionInput.trim().length >= 10) {
+      handleAskQuestion();
+    }
+  };
 
   return (
     <section id="benefits" className="py-16 md:py-24 bg-muted/30">
@@ -199,7 +215,57 @@ export default function BenefitsGrid() {
             );
           })}
         </div>
+
+        {/* Have More Questions Section */}
+        <div className="mt-12">
+          <Card className="p-6 md:p-8 border-primary/20 bg-primary/5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                <HelpCircle className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <h3 className="text-xl md:text-2xl font-bold text-foreground">
+                Have More Questions?
+              </h3>
+            </div>
+            <p className="text-muted-foreground mb-6">
+              Can't find what you're looking for? Ask us directly and we'll get back to you.
+            </p>
+            <div className="flex gap-3">
+              <Input
+                placeholder="Type your question here... (minimum 10 characters)"
+                value={questionInput}
+                onChange={(e) => setQuestionInput(e.target.value)}
+                onKeyDown={handleKeyPress}
+                className="flex-1 bg-background"
+                data-testid="input-homepage-question"
+              />
+              <Button
+                onClick={handleAskQuestion}
+                disabled={questionInput.trim().length < 10}
+                data-testid="button-homepage-ask-question"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                Ask
+              </Button>
+            </div>
+            {questionInput.length > 0 && questionInput.trim().length < 10 && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Please enter at least 10 characters
+              </p>
+            )}
+          </Card>
+        </div>
       </div>
+
+      <QuestionForm
+        question={questionInput}
+        isOpen={showQuestionForm}
+        onClose={() => setShowQuestionForm(false)}
+        onSuccess={() => {
+          setQuestionInput("");
+          setShowQuestionForm(false);
+        }}
+      />
 
       <Dialog open={!!selectedBenefit} onOpenChange={(open) => !open && setSelectedBenefit(null)}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
