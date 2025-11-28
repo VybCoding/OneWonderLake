@@ -134,7 +134,7 @@ interface CombinedFaq {
 
 export default function FAQ() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("general");
   const [userQuestion, setUserQuestion] = useState("");
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
@@ -305,7 +305,76 @@ export default function FAQ() {
           Find answers to common questions about annexation, property rights, taxes, and village services.
         </p>
 
-        <Card className="mb-8 p-6 bg-primary/5 border-primary/20">
+        <div className="mb-8 space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+            <Input
+              placeholder="Search questions..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+              data-testid="input-faq-search"
+            />
+          </div>
+
+          <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="all" data-testid="tab-category-all">All</TabsTrigger>
+              <TabsTrigger value="general" data-testid="tab-category-general">General</TabsTrigger>
+              <TabsTrigger value="taxes" data-testid="tab-category-taxes">Taxes</TabsTrigger>
+              <TabsTrigger value="property_rights" data-testid="tab-category-property">Property</TabsTrigger>
+              <TabsTrigger value="services" data-testid="tab-category-services">Services</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {selectedCategory === "all" ? (
+          <div className="space-y-8">
+            {Object.entries(groupedFaqs).map(([category, faqs]) => {
+              if (faqs.length === 0) return null;
+              return (
+                <div key={category}>
+                  <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center gap-2">
+                    <Badge className={`${categoryColors[category]}`}>
+                      {categoryLabels[category]}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground font-normal">
+                      ({faqs.length} {faqs.length === 1 ? "question" : "questions"})
+                    </span>
+                  </h3>
+                  <Accordion
+                    type="multiple"
+                    value={expandedItems}
+                    onValueChange={setExpandedItems}
+                    className="w-full"
+                  >
+                    {faqs.map(renderFaqItem)}
+                  </Accordion>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <Accordion
+            type="multiple"
+            value={expandedItems}
+            onValueChange={setExpandedItems}
+            className="w-full"
+          >
+            {filteredFaqs.map(renderFaqItem)}
+          </Accordion>
+        )}
+
+        {filteredFaqs.length === 0 && (
+          <div className="text-center py-12">
+            <MessageCircleQuestion className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              No questions found matching your search. Try a different term or ask us below!
+            </p>
+          </div>
+        )}
+
+        <Card className="mt-12 p-6 bg-primary/5 border-primary/20">
           <h3 className="text-xl font-semibold mb-2 text-foreground flex items-center gap-2">
             <MessageCircleQuestion className="w-5 h-5 text-primary" />
             Have More Questions?
@@ -371,75 +440,6 @@ export default function FAQ() {
             )}
           </div>
         </Card>
-
-        <div className="mb-8 space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-            <Input
-              placeholder="Search questions..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-              data-testid="input-faq-search"
-            />
-          </div>
-
-          <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="all" data-testid="tab-category-all">All</TabsTrigger>
-              <TabsTrigger value="general" data-testid="tab-category-general">General</TabsTrigger>
-              <TabsTrigger value="taxes" data-testid="tab-category-taxes">Taxes</TabsTrigger>
-              <TabsTrigger value="property_rights" data-testid="tab-category-property">Property</TabsTrigger>
-              <TabsTrigger value="services" data-testid="tab-category-services">Services</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-
-        {selectedCategory === "all" ? (
-          <div className="space-y-8">
-            {Object.entries(groupedFaqs).map(([category, faqs]) => {
-              if (faqs.length === 0) return null;
-              return (
-                <div key={category}>
-                  <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center gap-2">
-                    <Badge className={`${categoryColors[category]}`}>
-                      {categoryLabels[category]}
-                    </Badge>
-                    <span className="text-sm text-muted-foreground font-normal">
-                      ({faqs.length} {faqs.length === 1 ? "question" : "questions"})
-                    </span>
-                  </h3>
-                  <Accordion
-                    type="multiple"
-                    value={expandedItems}
-                    onValueChange={setExpandedItems}
-                    className="w-full"
-                  >
-                    {faqs.map(renderFaqItem)}
-                  </Accordion>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <Accordion
-            type="multiple"
-            value={expandedItems}
-            onValueChange={setExpandedItems}
-            className="w-full"
-          >
-            {filteredFaqs.map(renderFaqItem)}
-          </Accordion>
-        )}
-
-        {filteredFaqs.length === 0 && (
-          <div className="text-center py-12">
-            <MessageCircleQuestion className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">
-              No questions found matching your search. Try a different term or ask us above!
-            </p>
-          </div>
-        )}
       </div>
 
       <QuestionForm
