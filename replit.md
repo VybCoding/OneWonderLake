@@ -47,6 +47,14 @@ Combines static and dynamic content with search, category filters, and "New" / "
 #### Admin Questions Management
 New admin tabs for managing community questions: "Questions" to view, answer, and publish submitted questions, and "Published FAQs" to manage dynamic FAQs, including adding new ones and tracking view counts.
 
+#### Admin Email Communications
+An email tab in the admin dashboard allowing campaign organizers to send emails to interested parties and question submitters. Features include:
+- **Quick Reply**: Click-to-compose email responses to recent form submissions (interested parties and community questions)
+- **Compose Email**: Full email composition with HTML support for formatted messages
+- **Email History**: Track all sent emails with recipient, subject, status, and timestamp
+- **Resend Integration**: Uses Resend API for reliable email delivery from contact@onewonderlake.com
+The system only sends emails to users who have given contact consent and have not unsubscribed.
+
 #### Campaign Arguments (Mission Pillars)
 Six clickable pillars on the homepage provide in-depth content on key annexation benefits, such as "Bring State Tax Dollars Home" and "Improve Safety & Services".
 
@@ -73,6 +81,7 @@ Full-stack JavaScript setup:
 - `searched_addresses`: Records address lookups, result types, timestamps, and geocoded coordinates.
 - `community_questions`: Stores submitted questions, submitter info, category, status, answer, and consent data.
 - `dynamic_faqs`: Stores FAQ content, category, view count, and creation metadata.
+- `email_correspondence`: Tracks all sent emails including recipient, subject, body, status, Resend message ID, and relationships to interested parties or community questions.
 
 ## External Dependencies
 - **Mapping**: OpenStreetMap (tiles for Leaflet)
