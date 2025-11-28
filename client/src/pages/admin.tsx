@@ -2024,7 +2024,7 @@ export default function AdminPage() {
                             <TableCell>
                               <Checkbox 
                                 checked={selectedContacts.has(contact.id)}
-                                disabled={contact.marketingOptOut || contact.unsubscribed}
+                                disabled={contact.marketingOptOut === true || contact.unsubscribed === true}
                                 onCheckedChange={(checked) => {
                                   const newSet = new Set(selectedContacts);
                                   if (checked) {
@@ -2806,6 +2806,32 @@ export default function AdminPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Footer */}
+      <footer className="mt-12 py-6 border-t border-border/40">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-2">
+              <img 
+                src={logoImage} 
+                alt="One Wonder Lake" 
+                className="h-8 w-auto"
+              />
+              <span className="text-sm text-muted-foreground">
+                Admin Dashboard
+              </span>
+            </div>
+            <div className="text-center text-sm text-muted-foreground">
+              <p>One Wonder Lake Civic Advocacy Campaign</p>
+              <p className="text-xs mt-1">Community Sentiment Dashboard v1.3.0</p>
+            </div>
+            <div className="text-sm text-muted-foreground text-right">
+              <p>Protected by Replit Auth</p>
+              <p className="text-xs mt-1">contact@onewonderlake.com</p>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -98,8 +98,9 @@ Full-stack JavaScript setup:
 - `community_questions`: Stores submitted questions, submitter info, category, status, answer, and consent data.
 - `dynamic_faqs`: Stores FAQ content, category, view count, and creation metadata.
 - `email_correspondence`: Tracks all sent emails including recipient, subject, body, status, Resend message ID, and relationships to interested parties or community questions.
-- `inbound_emails`: Stores received emails from contact@onewonderlake.com including sender info, subject, body, read/replied status, and reply associations.
+- `inbound_emails`: Stores received emails from contact@onewonderlake.com including sender info, subject, body (fetched via Resend API with retry), read/replied status, reply associations, and debug payload.
 - `email_usage`: Tracks monthly email counts (sent + received) for usage monitoring and auto-shutoff enforcement.
+- `contacts`: Unified contact management table aggregating data from interested parties, community questions, and inbound emails. Includes marketing opt-out tracking and bulk messaging support.
 
 ## External Dependencies
 - **Mapping**: OpenStreetMap (tiles for Leaflet)
@@ -114,6 +115,12 @@ Full-stack JavaScript setup:
 - **Icons**: Lucide React
 
 ## Version History
+- **v1.3.0** (2025-11-28): 
+  - Added unified Contacts tab with CRUD operations and bulk messaging
+  - Master-detail inbox layout with click-to-read and inline reply
+  - Email body fetching with retry mechanism (Resend API timing fix)
+  - Delete functionality for inbound emails
+  - Admin footer with branding
 - **v1.2.1** (2025-11-28): Email tab now shows unread inbox count as notification badge instead of total usage
 - **v1.2.0** (2025-11-28): Added logo branding to all page headers, configured Resend webhook for bidirectional email
 - **v1.1.x**: Bidirectional email system with inbox, usage tracking, and auto-shutoff

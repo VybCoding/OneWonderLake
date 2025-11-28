@@ -1414,41 +1414,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // IMPORTANT: Resend webhook does NOT include email body content!
         // We must fetch it separately via the Resend API
+        // Note: There's a timing issue - the email content may not be immediately available
+        // So we implement a retry mechanism with exponential backoff
         let textBody: string | null = null;
         let htmlBody: string | null = null;
-        let debugInfo: any = { webhookPayload: event, fetchAttempt: null, fetchError: null };
+        let debugInfo: any = { webhookPayload: event, fetchAttempts: [], fetchError: null };
         
         const resendApiKey = process.env.RESEND_API_KEY;
         if (resendApiKey && data.email_id) {
-          try {
-            debugInfo.fetchAttempt = { url: `https://api.resend.com/emails/${data.email_id}`, hasApiKey: true };
-            const emailContentResponse = await fetch(
-              `https://api.resend.com/emails/${data.email_id}`,
-              {
-                headers: {
-                  'Authorization': `Bearer ${resendApiKey}`,
-                  'Content-Type': 'application/json'
+          const maxRetries = 3;
+          const delays = [1000, 2000, 3000]; // Wait 1s, 2s, 3s between retries
+          
+          for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+              // Wait before retry (skip wait on first attempt)
+              if (attempt > 0) {
+                await new Promise(resolve => setTimeout(resolve, delays[attempt - 1]));
+              }
+              
+              const attemptInfo: any = { 
+                attempt: attempt + 1, 
+                url: `https://api.resend.com/emails/${data.email_id}`,
+                timestamp: new Date().toISOString()
+              };
+              
+              const emailContentResponse = await fetch(
+                `https://api.resend.com/emails/${data.email_id}`,
+                {
+                  headers: {
+                    'Authorization': `Bearer ${resendApiKey}`,
+                    'Content-Type': 'application/json'
+                  }
+                }
+              );
+              
+              attemptInfo.status = emailContentResponse.status;
+              
+              if (emailContentResponse.ok) {
+                const emailContent = await emailContentResponse.json();
+                attemptInfo.success = true;
+                attemptInfo.responseKeys = Object.keys(emailContent);
+                textBody = emailContent.text || null;
+                htmlBody = emailContent.html || null;
+                debugInfo.fetchAttempts.push(attemptInfo);
+                break; // Success - exit retry loop
+              } else {
+                const errorText = await emailContentResponse.text();
+                attemptInfo.success = false;
+                attemptInfo.errorText = errorText;
+                debugInfo.fetchAttempts.push(attemptInfo);
+                
+                // If it's not a 404 (not found), don't retry
+                if (emailContentResponse.status !== 404) {
+                  break;
                 }
               }
-            );
-            
-            debugInfo.fetchAttempt.status = emailContentResponse.status;
-            
-            if (emailContentResponse.ok) {
-              const emailContent = await emailContentResponse.json();
-              debugInfo.fetchAttempt.responseKeys = Object.keys(emailContent);
-              debugInfo.fetchAttempt.fullResponse = emailContent;
-              textBody = emailContent.text || null;
-              htmlBody = emailContent.html || null;
-            } else {
-              const errorText = await emailContentResponse.text();
-              debugInfo.fetchAttempt.errorText = errorText;
+            } catch (fetchError: any) {
+              debugInfo.fetchAttempts.push({
+                attempt: attempt + 1,
+                error: fetchError.message || String(fetchError)
+              });
             }
-          } catch (fetchError: any) {
-            debugInfo.fetchError = fetchError.message || String(fetchError);
           }
         } else {
-          debugInfo.fetchAttempt = { skipped: true, reason: resendApiKey ? 'no email_id' : 'no API key' };
+          debugInfo.fetchAttempts.push({ skipped: true, reason: resendApiKey ? 'no email_id' : 'no API key' });
         }
         
         // Store the inbound email with fetched content and debug info
