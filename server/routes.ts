@@ -1379,7 +1379,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("[RESEND WEBHOOK] Received event:", event.type);
       
-      // Log the FULL raw payload for debugging
+      // Log the FULL raw payload for debugging - write to file for persistence
+      const fs = await import('fs');
+      const logPath = '/tmp/resend_webhook_debug.json';
+      fs.writeFileSync(logPath, JSON.stringify(event, null, 2));
+      console.log("[RESEND WEBHOOK] FULL RAW PAYLOAD written to:", logPath);
       console.log("[RESEND WEBHOOK] FULL RAW PAYLOAD:", JSON.stringify(event, null, 2));
       
       // Handle email.received event
