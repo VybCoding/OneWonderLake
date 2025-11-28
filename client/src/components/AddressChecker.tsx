@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
@@ -644,6 +644,11 @@ export default function AddressChecker() {
             </div>
           </div>
         )}
+
+        <div className="mt-12 flex flex-col items-center text-muted-foreground" data-testid="scroll-indicator">
+          <span className="text-sm mb-2">Explore more below</span>
+          <ChevronDown className="w-6 h-6 animate-bounce" />
+        </div>
       </div>
     </section>
   );
