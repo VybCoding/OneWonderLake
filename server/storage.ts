@@ -5,6 +5,8 @@ import {
   communityQuestions,
   dynamicFaqs,
   emailCorrespondence,
+  inboundEmails,
+  emailUsage,
   type User,
   type UpsertUser,
   type InterestedParty,
@@ -17,9 +19,13 @@ import {
   type InsertDynamicFaq,
   type EmailCorrespondence,
   type InsertEmailCorrespondence,
+  type InboundEmail,
+  type InsertInboundEmail,
+  type EmailUsage,
+  type InsertEmailUsage,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -60,6 +66,21 @@ export interface IStorage {
   createEmailCorrespondence(email: InsertEmailCorrespondence): Promise<EmailCorrespondence>;
   getEmailCorrespondence(): Promise<EmailCorrespondence[]>;
   getEmailCorrespondenceByRelated(relatedType: string, relatedId: string): Promise<EmailCorrespondence[]>;
+  
+  // Inbound email operations
+  createInboundEmail(email: InsertInboundEmail): Promise<InboundEmail>;
+  getInboundEmails(): Promise<InboundEmail[]>;
+  getInboundEmailById(id: string): Promise<InboundEmail | undefined>;
+  getInboundEmailByResendId(resendEmailId: string): Promise<InboundEmail | undefined>;
+  markInboundEmailRead(id: string): Promise<void>;
+  markInboundEmailReplied(id: string, replyEmailId: string): Promise<void>;
+  
+  // Email usage tracking operations
+  getOrCreateEmailUsage(month: string): Promise<EmailUsage>;
+  incrementSentCount(month: string): Promise<EmailUsage>;
+  incrementReceivedCount(month: string): Promise<EmailUsage>;
+  getCurrentMonthUsage(): Promise<EmailUsage>;
+  setEmailShutoff(month: string, isShutoff: boolean): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -300,6 +321,111 @@ export class DatabaseStorage implements IStorage {
       .from(emailCorrespondence)
       .where(eq(emailCorrespondence.relatedType, relatedType))
       .orderBy(desc(emailCorrespondence.createdAt));
+  }
+
+  // Inbound email operations
+  async createInboundEmail(email: InsertInboundEmail): Promise<InboundEmail> {
+    const [newEmail] = await db
+      .insert(inboundEmails)
+      .values(email)
+      .returning();
+    return newEmail;
+  }
+
+  async getInboundEmails(): Promise<InboundEmail[]> {
+    return await db
+      .select()
+      .from(inboundEmails)
+      .orderBy(desc(inboundEmails.receivedAt));
+  }
+
+  async getInboundEmailById(id: string): Promise<InboundEmail | undefined> {
+    const [email] = await db
+      .select()
+      .from(inboundEmails)
+      .where(eq(inboundEmails.id, id));
+    return email;
+  }
+
+  async getInboundEmailByResendId(resendEmailId: string): Promise<InboundEmail | undefined> {
+    const [email] = await db
+      .select()
+      .from(inboundEmails)
+      .where(eq(inboundEmails.resendEmailId, resendEmailId));
+    return email;
+  }
+
+  async markInboundEmailRead(id: string): Promise<void> {
+    await db
+      .update(inboundEmails)
+      .set({ isRead: true })
+      .where(eq(inboundEmails.id, id));
+  }
+
+  async markInboundEmailReplied(id: string, replyEmailId: string): Promise<void> {
+    await db
+      .update(inboundEmails)
+      .set({ isReplied: true, replyEmailId })
+      .where(eq(inboundEmails.id, id));
+  }
+
+  // Email usage tracking operations
+  async getOrCreateEmailUsage(month: string): Promise<EmailUsage> {
+    const [existing] = await db
+      .select()
+      .from(emailUsage)
+      .where(eq(emailUsage.month, month));
+    
+    if (existing) {
+      return existing;
+    }
+
+    const [created] = await db
+      .insert(emailUsage)
+      .values({ month, sentCount: 0, receivedCount: 0, isShutoff: false })
+      .returning();
+    return created;
+  }
+
+  async incrementSentCount(month: string): Promise<EmailUsage> {
+    await this.getOrCreateEmailUsage(month);
+    
+    const [updated] = await db
+      .update(emailUsage)
+      .set({ 
+        sentCount: sql`${emailUsage.sentCount} + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(emailUsage.month, month))
+      .returning();
+    return updated;
+  }
+
+  async incrementReceivedCount(month: string): Promise<EmailUsage> {
+    await this.getOrCreateEmailUsage(month);
+    
+    const [updated] = await db
+      .update(emailUsage)
+      .set({ 
+        receivedCount: sql`${emailUsage.receivedCount} + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(emailUsage.month, month))
+      .returning();
+    return updated;
+  }
+
+  async getCurrentMonthUsage(): Promise<EmailUsage> {
+    const now = new Date();
+    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return this.getOrCreateEmailUsage(month);
+  }
+
+  async setEmailShutoff(month: string, isShutoff: boolean): Promise<void> {
+    await db
+      .update(emailUsage)
+      .set({ isShutoff, updatedAt: new Date() })
+      .where(eq(emailUsage.month, month));
   }
 }
 

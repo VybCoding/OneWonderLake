@@ -6,8 +6,13 @@ import { join } from "path";
 import { randomBytes } from "crypto";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { sendEmail } from "./resend";
+import { sendEmail, getEmailContent, getEmailLimits } from "./resend";
 import { insertInterestedPartySchema, insertSearchedAddressSchema, insertCommunityQuestionSchema, insertDynamicFaqSchema, type BuildInfo } from "@shared/schema";
+
+function getCurrentMonth(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
 
 function generateUnsubscribeToken(): string {
   return randomBytes(32).toString("hex");
@@ -848,7 +853,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      const { to, toName, subject, htmlBody, textBody, relatedType, relatedId } = req.body;
+      const { to, toName, subject, htmlBody, textBody, relatedType, relatedId, inReplyToEmailId } = req.body;
       
       if (!to || typeof to !== "string" || !to.includes("@")) {
         return res.status(400).json({ error: "Valid recipient email is required" });
@@ -862,6 +867,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Email body is required" });
       }
 
+      // Check email usage limits
+      const currentMonth = getCurrentMonth();
+      const usage = await storage.getCurrentMonthUsage();
+      const limits = getEmailLimits();
+      
+      const totalEmails = (usage.sentCount || 0) + (usage.receivedCount || 0);
+      
+      if (usage.isShutoff) {
+        return res.status(429).json({ 
+          error: "Email sending is temporarily disabled",
+          message: `Monthly email limit reached (${limits.autoShutoffThreshold}/${limits.monthlyLimit}). Contact support to continue.`,
+          usage: { sent: usage.sentCount, received: usage.receivedCount, total: totalEmails }
+        });
+      }
+      
+      if (totalEmails >= limits.autoShutoffThreshold) {
+        await storage.setEmailShutoff(currentMonth, true);
+        return res.status(429).json({ 
+          error: "Email limit reached",
+          message: `Monthly email limit of ${limits.autoShutoffThreshold} reached. Email sending has been paused to stay within free tier.`,
+          usage: { sent: usage.sentCount, received: usage.receivedCount, total: totalEmails }
+        });
+      }
+
       // Send email via Resend
       const result = await sendEmail(to, subject, htmlBody, textBody);
       
@@ -869,6 +898,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Email send error:", result.error);
         return res.status(500).json({ error: "Failed to send email", details: result.error });
       }
+
+      // Increment sent count
+      await storage.incrementSentCount(currentMonth);
 
       // Store email in correspondence log
       const emailRecord = await storage.createEmailCorrespondence({
@@ -883,6 +915,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         resendId: result.data?.id || null,
         status: "sent",
       });
+
+      // If this is a reply to an inbound email, mark it as replied
+      if (inReplyToEmailId) {
+        await storage.markInboundEmailReplied(inReplyToEmailId, emailRecord.id);
+      }
 
       res.json({ 
         success: true, 
@@ -911,6 +948,164 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching email history:", error);
       res.status(500).json({ error: "Failed to fetch email history" });
+    }
+  });
+
+  // Get inbound emails (admin only)
+  app.get("/api/admin/email/inbox", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const emails = await storage.getInboundEmails();
+      res.json(emails);
+    } catch (error) {
+      console.error("Error fetching inbound emails:", error);
+      res.status(500).json({ error: "Failed to fetch inbox" });
+    }
+  });
+
+  // Get single inbound email with content (admin only)
+  app.get("/api/admin/email/inbox/:id", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const email = await storage.getInboundEmailById(req.params.id);
+      if (!email) {
+        return res.status(404).json({ error: "Email not found" });
+      }
+
+      // Mark as read
+      await storage.markInboundEmailRead(req.params.id);
+
+      // If we don't have the full content, try to fetch it from Resend
+      if (!email.htmlBody && !email.textBody && email.resendEmailId) {
+        try {
+          const content = await getEmailContent(email.resendEmailId);
+          // Update our stored email with the content if we got it
+          if (content) {
+            return res.json({
+              ...email,
+              isRead: true,
+              htmlBody: content.html || null,
+              textBody: content.text || null,
+            });
+          }
+        } catch (fetchError) {
+          console.error("Could not fetch email content from Resend:", fetchError);
+        }
+      }
+
+      res.json({ ...email, isRead: true });
+    } catch (error) {
+      console.error("Error fetching inbound email:", error);
+      res.status(500).json({ error: "Failed to fetch email" });
+    }
+  });
+
+  // Get email usage statistics (admin only)
+  app.get("/api/admin/email/usage", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const usage = await storage.getCurrentMonthUsage();
+      const limits = getEmailLimits();
+      
+      res.json({
+        month: usage.month,
+        sent: usage.sentCount || 0,
+        received: usage.receivedCount || 0,
+        total: (usage.sentCount || 0) + (usage.receivedCount || 0),
+        monthlyLimit: limits.monthlyLimit,
+        autoShutoffThreshold: limits.autoShutoffThreshold,
+        isShutoff: usage.isShutoff || false,
+        remaining: Math.max(0, limits.autoShutoffThreshold - ((usage.sentCount || 0) + (usage.receivedCount || 0))),
+      });
+    } catch (error) {
+      console.error("Error fetching email usage:", error);
+      res.status(500).json({ error: "Failed to fetch email usage" });
+    }
+  });
+
+  // Resend webhook endpoint for receiving inbound emails
+  app.post("/api/webhooks/resend", async (req: Request, res: Response) => {
+    try {
+      const event = req.body;
+      
+      console.log("[RESEND WEBHOOK] Received event:", event.type);
+      
+      // Handle email.received event
+      if (event.type === "email.received") {
+        const data = event.data;
+        
+        // Check if we already processed this email
+        const existing = await storage.getInboundEmailByResendId(data.email_id);
+        if (existing) {
+          console.log("[RESEND WEBHOOK] Email already processed:", data.email_id);
+          return res.json({ success: true, message: "Already processed" });
+        }
+
+        // Check email usage limits before accepting
+        const currentMonth = getCurrentMonth();
+        const usage = await storage.getCurrentMonthUsage();
+        const limits = getEmailLimits();
+        const totalEmails = (usage.sentCount || 0) + (usage.receivedCount || 0);
+        
+        if (totalEmails >= limits.autoShutoffThreshold) {
+          console.log("[RESEND WEBHOOK] Email limit reached, but still storing for reference");
+        }
+
+        // Parse the from address
+        const fromMatch = data.from?.match(/^(.+?)\s*<(.+?)>$/) || [null, null, data.from];
+        const fromName = fromMatch[1]?.trim() || null;
+        const fromEmail = fromMatch[2]?.trim() || data.from;
+
+        // Store the inbound email
+        const inboundEmail = await storage.createInboundEmail({
+          resendEmailId: data.email_id,
+          fromEmail: fromEmail,
+          fromName: fromName,
+          toEmail: Array.isArray(data.to) ? data.to[0] : data.to,
+          subject: data.subject || "(No Subject)",
+          textBody: null, // Will be fetched when viewing
+          htmlBody: null, // Will be fetched when viewing
+          messageId: data.message_id || null,
+          inReplyTo: null,
+          isRead: false,
+          isReplied: false,
+          replyEmailId: null,
+          attachments: data.attachments || null,
+          receivedAt: new Date(data.created_at || Date.now()),
+        });
+
+        // Increment received count
+        await storage.incrementReceivedCount(currentMonth);
+
+        console.log("[RESEND WEBHOOK] Stored inbound email:", inboundEmail.id);
+        
+        res.json({ success: true, emailId: inboundEmail.id });
+      } else {
+        // Handle other webhook events (delivery status, etc.)
+        console.log("[RESEND WEBHOOK] Unhandled event type:", event.type);
+        res.json({ success: true, message: "Event received" });
+      }
+    } catch (error) {
+      console.error("[RESEND WEBHOOK] Error processing webhook:", error);
+      res.status(500).json({ error: "Webhook processing failed" });
     }
   });
 

@@ -196,6 +196,54 @@ export const insertEmailCorrespondenceSchema = createInsertSchema(emailCorrespon
 export type InsertEmailCorrespondence = z.infer<typeof insertEmailCorrespondenceSchema>;
 export type EmailCorrespondence = typeof emailCorrespondence.$inferSelect;
 
+// Inbound emails - emails received via Resend webhook
+export const inboundEmails = pgTable("inbound_emails", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  resendEmailId: varchar("resend_email_id").notNull().unique(), // Resend's email_id from webhook
+  fromEmail: varchar("from_email").notNull(),
+  fromName: varchar("from_name"),
+  toEmail: varchar("to_email").notNull(), // Should be contact@onewonderlake.com
+  subject: varchar("subject").notNull(),
+  textBody: text("text_body"),
+  htmlBody: text("html_body"),
+  messageId: varchar("message_id"), // Original message ID header
+  inReplyTo: varchar("in_reply_to"), // For threading
+  isRead: boolean("is_read").default(false),
+  isReplied: boolean("is_replied").default(false),
+  replyEmailId: varchar("reply_email_id"), // ID of our reply email_correspondence record
+  attachments: jsonb("attachments"), // Array of attachment metadata
+  receivedAt: timestamp("received_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertInboundEmailSchema = createInsertSchema(inboundEmails).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertInboundEmail = z.infer<typeof insertInboundEmailSchema>;
+export type InboundEmail = typeof inboundEmails.$inferSelect;
+
+// Email usage tracking - monthly email counters for free tier management
+export const emailUsage = pgTable("email_usage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  month: varchar("month").notNull().unique(), // Format: YYYY-MM
+  sentCount: integer("sent_count").default(0),
+  receivedCount: integer("received_count").default(0),
+  isShutoff: boolean("is_shutoff").default(false), // Auto-shutoff when reaching 2500
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertEmailUsageSchema = createInsertSchema(emailUsage).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertEmailUsage = z.infer<typeof insertEmailUsageSchema>;
+export type EmailUsage = typeof emailUsage.$inferSelect;
+
 // Build info type for version tracking
 export interface BuildInfo {
   version: string;
