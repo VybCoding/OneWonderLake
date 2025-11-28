@@ -1042,6 +1042,312 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete inbound email (admin only)
+  app.delete("/api/admin/email/inbox/:id", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const email = await storage.getInboundEmailById(req.params.id);
+      if (!email) {
+        return res.status(404).json({ error: "Email not found" });
+      }
+
+      await storage.deleteInboundEmail(req.params.id);
+      res.json({ success: true, message: "Email deleted" });
+    } catch (error) {
+      console.error("Error deleting inbound email:", error);
+      res.status(500).json({ error: "Failed to delete email" });
+    }
+  });
+
+  // Mark inbound email as read (admin only)
+  app.patch("/api/admin/email/inbox/:id/read", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      await storage.markInboundEmailRead(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking email as read:", error);
+      res.status(500).json({ error: "Failed to mark email as read" });
+    }
+  });
+
+  // ========== CONTACTS ROUTES ==========
+  
+  // Get all contacts (admin only)
+  app.get("/api/admin/contacts", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const contactList = await storage.getContacts();
+      res.json(contactList);
+    } catch (error) {
+      console.error("Error fetching contacts:", error);
+      res.status(500).json({ error: "Failed to fetch contacts" });
+    }
+  });
+
+  // Create a new contact (admin only)
+  app.post("/api/admin/contacts", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const contact = await storage.createContact(req.body);
+      res.json(contact);
+    } catch (error) {
+      console.error("Error creating contact:", error);
+      res.status(500).json({ error: "Failed to create contact" });
+    }
+  });
+
+  // Update a contact (admin only)
+  app.patch("/api/admin/contacts/:id", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const contact = await storage.updateContact(req.params.id, req.body);
+      if (!contact) {
+        return res.status(404).json({ error: "Contact not found" });
+      }
+      res.json(contact);
+    } catch (error) {
+      console.error("Error updating contact:", error);
+      res.status(500).json({ error: "Failed to update contact" });
+    }
+  });
+
+  // Delete a contact (admin only)
+  app.delete("/api/admin/contacts/:id", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      await storage.deleteContact(req.params.id);
+      res.json({ success: true, message: "Contact deleted" });
+    } catch (error) {
+      console.error("Error deleting contact:", error);
+      res.status(500).json({ error: "Failed to delete contact" });
+    }
+  });
+
+  // Seed contacts from existing data (admin only)
+  app.post("/api/admin/contacts/seed", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      let seededCount = 0;
+
+      // Get all interested parties and create contacts
+      const parties = await storage.getInterestedParties();
+      for (const party of parties) {
+        const existing = await storage.getContactByEmail(party.email);
+        if (!existing) {
+          await storage.createContact({
+            name: party.name,
+            email: party.email,
+            phone: party.phone || undefined,
+            address: party.address || undefined,
+            source: "interested_party",
+            relatedEntityId: party.id,
+            interestStatus: party.interested ? "interested" : "not_interested",
+            contactConsent: party.contactConsent,
+            marketingOptOut: false,
+            unsubscribed: party.unsubscribed || false,
+          });
+          seededCount++;
+        }
+      }
+
+      // Get all community questions and create contacts
+      const questions = await storage.getCommunityQuestions();
+      for (const question of questions) {
+        const existing = await storage.getContactByEmail(question.email);
+        if (!existing) {
+          await storage.createContact({
+            name: question.name,
+            email: question.email,
+            phone: question.phone || undefined,
+            address: question.address || undefined,
+            source: "community_question",
+            relatedEntityId: question.id,
+            interestStatus: "unknown",
+            contactConsent: question.contactConsent,
+            marketingOptOut: false,
+            unsubscribed: question.unsubscribed || false,
+          });
+          seededCount++;
+        }
+      }
+
+      // Get all inbound emails and create contacts
+      const inbound = await storage.getInboundEmails();
+      for (const email of inbound) {
+        const existing = await storage.getContactByEmail(email.fromEmail);
+        if (!existing) {
+          await storage.createContact({
+            name: email.fromName || email.fromEmail,
+            email: email.fromEmail,
+            source: "inbound_email",
+            relatedEntityId: email.id,
+            interestStatus: "unknown",
+            contactConsent: false,
+            marketingOptOut: false,
+            unsubscribed: false,
+          });
+          seededCount++;
+        }
+      }
+
+      res.json({ success: true, message: `Seeded ${seededCount} new contacts` });
+    } catch (error) {
+      console.error("Error seeding contacts:", error);
+      res.status(500).json({ error: "Failed to seed contacts" });
+    }
+  });
+
+  // Bulk send email to contacts (admin only)
+  app.post("/api/admin/email/bulk-send", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { contactIds, subject, htmlBody, textBody } = req.body;
+
+      if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
+        return res.status(400).json({ error: "No contacts selected" });
+      }
+
+      if (!subject || !htmlBody) {
+        return res.status(400).json({ error: "Subject and body are required" });
+      }
+
+      // Check usage limits
+      const usage = await storage.getCurrentMonthUsage();
+      const limits = getEmailLimits();
+      const totalEmails = (usage.sentCount || 0) + (usage.receivedCount || 0);
+      
+      if (usage.isShutoff || totalEmails >= limits.autoShutoffThreshold) {
+        return res.status(429).json({ 
+          error: "Email sending is paused - monthly limit reached" 
+        });
+      }
+
+      // Check if we have enough capacity for the bulk send
+      const remainingCapacity = limits.autoShutoffThreshold - totalEmails;
+      if (contactIds.length > remainingCapacity) {
+        return res.status(429).json({ 
+          error: `Cannot send ${contactIds.length} emails - only ${remainingCapacity} remaining this month` 
+        });
+      }
+
+      let sentCount = 0;
+      let skippedCount = 0;
+      const errors: string[] = [];
+
+      for (const contactId of contactIds) {
+        try {
+          const contact = await storage.getContactById(contactId);
+          if (!contact) {
+            errors.push(`Contact ${contactId} not found`);
+            continue;
+          }
+
+          // Skip if opted out or unsubscribed
+          if (contact.marketingOptOut || contact.unsubscribed) {
+            skippedCount++;
+            continue;
+          }
+
+          // Send email
+          const result = await resend.emails.send({
+            from: "One Wonder Lake <contact@onewonderlake.com>",
+            to: contact.email,
+            subject: subject,
+            html: htmlBody,
+            text: textBody || undefined,
+          });
+
+          if (result.error) {
+            errors.push(`Failed to send to ${contact.email}: ${result.error.message}`);
+            continue;
+          }
+
+          // Record the email
+          await storage.createEmailCorrespondence({
+            recipientEmail: contact.email,
+            recipientName: contact.name,
+            subject: subject,
+            htmlBody: htmlBody,
+            textBody: textBody || null,
+            relatedType: "bulk_send",
+            relatedId: contactId,
+            sentBy: userId,
+            resendId: result.data?.id || null,
+            status: "sent",
+          });
+
+          // Increment sent count
+          const currentMonth = getCurrentMonth();
+          await storage.incrementSentCount(currentMonth);
+          sentCount++;
+
+        } catch (emailError: any) {
+          errors.push(`Error sending to contact ${contactId}: ${emailError.message}`);
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Sent ${sentCount} emails, skipped ${skippedCount} (opted out)`,
+        sent: sentCount,
+        skipped: skippedCount,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error("Error sending bulk emails:", error);
+      res.status(500).json({ error: "Failed to send bulk emails" });
+    }
+  });
+
   // Resend webhook endpoint for receiving inbound emails
   app.post("/api/webhooks/resend", async (req: Request, res: Response) => {
     try {
@@ -1105,23 +1411,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fromName = fromMatch[1]?.trim() || null;
         const fromEmail = fromMatch[2]?.trim() || data.from;
 
-        // Store the inbound email
+        // Log the full data structure for debugging
+        console.log("[RESEND WEBHOOK] Full email data keys:", Object.keys(data));
+        
+        // Store the inbound email with full content from Resend
+        // Resend webhook sends: text (plain text body), html (HTML body)
         const inboundEmail = await storage.createInboundEmail({
           resendEmailId: data.email_id,
           fromEmail: fromEmail,
           fromName: fromName,
           toEmail: Array.isArray(data.to) ? data.to[0] : data.to,
           subject: data.subject || "(No Subject)",
-          textBody: null, // Will be fetched when viewing
-          htmlBody: null, // Will be fetched when viewing
+          textBody: data.text || data.body || null, // Resend uses 'text' for plain text content
+          htmlBody: data.html || null, // Resend uses 'html' for HTML content
           messageId: data.message_id || null,
-          inReplyTo: null,
+          inReplyTo: data.in_reply_to || null,
           isRead: false,
           isReplied: false,
           replyEmailId: null,
           attachments: data.attachments || null,
           receivedAt: new Date(data.created_at || Date.now()),
         });
+        
+        console.log("[RESEND WEBHOOK] Email content stored - text:", !!data.text, "html:", !!data.html);
 
         // Increment received count
         await storage.incrementReceivedCount(currentMonth);

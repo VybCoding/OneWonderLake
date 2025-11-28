@@ -7,6 +7,7 @@ import {
   emailCorrespondence,
   inboundEmails,
   emailUsage,
+  contacts,
   type User,
   type UpsertUser,
   type InterestedParty,
@@ -23,6 +24,8 @@ import {
   type InsertInboundEmail,
   type EmailUsage,
   type InsertEmailUsage,
+  type Contact,
+  type InsertContact,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and } from "drizzle-orm";
@@ -81,6 +84,17 @@ export interface IStorage {
   incrementReceivedCount(month: string): Promise<EmailUsage>;
   getCurrentMonthUsage(): Promise<EmailUsage>;
   setEmailShutoff(month: string, isShutoff: boolean): Promise<void>;
+  
+  // Contact operations
+  createContact(contact: InsertContact): Promise<Contact>;
+  getContacts(): Promise<Contact[]>;
+  getContactById(id: string): Promise<Contact | undefined>;
+  getContactByEmail(email: string): Promise<Contact | undefined>;
+  updateContact(id: string, updates: Partial<InsertContact>): Promise<Contact | undefined>;
+  deleteContact(id: string): Promise<void>;
+  
+  // Additional inbound email operations
+  deleteInboundEmail(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -426,6 +440,60 @@ export class DatabaseStorage implements IStorage {
       .update(emailUsage)
       .set({ isShutoff, updatedAt: new Date() })
       .where(eq(emailUsage.month, month));
+  }
+
+  // Contact operations
+  async createContact(contact: InsertContact): Promise<Contact> {
+    const [newContact] = await db
+      .insert(contacts)
+      .values(contact)
+      .returning();
+    return newContact;
+  }
+
+  async getContacts(): Promise<Contact[]> {
+    return await db
+      .select()
+      .from(contacts)
+      .orderBy(desc(contacts.createdAt));
+  }
+
+  async getContactById(id: string): Promise<Contact | undefined> {
+    const [contact] = await db
+      .select()
+      .from(contacts)
+      .where(eq(contacts.id, id));
+    return contact;
+  }
+
+  async getContactByEmail(email: string): Promise<Contact | undefined> {
+    const [contact] = await db
+      .select()
+      .from(contacts)
+      .where(eq(contacts.email, email));
+    return contact;
+  }
+
+  async updateContact(id: string, updates: Partial<InsertContact>): Promise<Contact | undefined> {
+    const [updated] = await db
+      .update(contacts)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(contacts.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteContact(id: string): Promise<void> {
+    await db
+      .delete(contacts)
+      .where(eq(contacts.id, id));
+  }
+
+  // Additional inbound email operations
+  async deleteInboundEmail(id: string): Promise<void> {
+    await db
+      .delete(inboundEmails)
+      .where(eq(inboundEmails.id, id));
   }
 }
 

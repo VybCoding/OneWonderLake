@@ -244,6 +244,53 @@ export const insertEmailUsageSchema = createInsertSchema(emailUsage).omit({
 export type InsertEmailUsage = z.infer<typeof insertEmailUsageSchema>;
 export type EmailUsage = typeof emailUsage.$inferSelect;
 
+// Contact sources enum
+export const contactSources = ["interested_party", "community_question", "inbound_email", "tax_estimator", "manual"] as const;
+export type ContactSource = typeof contactSources[number];
+
+// Interest status enum
+export const interestStatuses = ["interested", "not_interested", "unknown"] as const;
+export type InterestStatus = typeof interestStatuses[number];
+
+// Contacts - unified contact list from all sources
+export const contacts = pgTable("contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  email: varchar("email").notNull(),
+  phone: varchar("phone"),
+  address: varchar("address"),
+  source: varchar("source").notNull().default("manual"), // Source of the contact
+  relatedEntityId: varchar("related_entity_id"), // ID of the original record (interested_party, question, etc.)
+  interestStatus: varchar("interest_status").notNull().default("unknown"), // interested, not_interested, unknown
+  contactConsent: boolean("contact_consent").default(false),
+  marketingOptOut: boolean("marketing_opt_out").default(false), // User opted out of marketing/promotions
+  unsubscribed: boolean("unsubscribed").default(false),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertContactSchema = createInsertSchema(contacts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
+  email: z.string().email("Please enter a valid email address").max(255, "Email is too long"),
+  phone: z.string().max(20, "Phone number is too long").optional().or(z.literal("")),
+  address: z.string().max(500, "Address is too long").optional().or(z.literal("")),
+  source: z.enum(contactSources).default("manual"),
+  interestStatus: z.enum(interestStatuses).default("unknown"),
+  contactConsent: z.boolean().default(false),
+  marketingOptOut: z.boolean().default(false),
+  unsubscribed: z.boolean().default(false),
+  notes: z.string().max(1000, "Notes are too long").optional().or(z.literal("")),
+  relatedEntityId: z.string().optional(),
+});
+
+export type InsertContact = z.infer<typeof insertContactSchema>;
+export type Contact = typeof contacts.$inferSelect;
+
 // Build info type for version tracking
 export interface BuildInfo {
   version: string;
