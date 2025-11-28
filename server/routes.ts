@@ -1416,11 +1416,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // We must fetch it separately via the Resend API
         let textBody: string | null = null;
         let htmlBody: string | null = null;
+        let debugInfo: any = { webhookPayload: event, fetchAttempt: null, fetchError: null };
         
         const resendApiKey = process.env.RESEND_API_KEY;
         if (resendApiKey && data.email_id) {
           try {
-            console.log("[RESEND WEBHOOK] Fetching email content from Resend API for:", data.email_id);
+            debugInfo.fetchAttempt = { url: `https://api.resend.com/emails/${data.email_id}`, hasApiKey: true };
             const emailContentResponse = await fetch(
               `https://api.resend.com/emails/${data.email_id}`,
               {
@@ -1431,23 +1432,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             );
             
+            debugInfo.fetchAttempt.status = emailContentResponse.status;
+            
             if (emailContentResponse.ok) {
               const emailContent = await emailContentResponse.json();
-              console.log("[RESEND WEBHOOK] Email content fetched, keys:", Object.keys(emailContent));
+              debugInfo.fetchAttempt.responseKeys = Object.keys(emailContent);
+              debugInfo.fetchAttempt.fullResponse = emailContent;
               textBody = emailContent.text || null;
               htmlBody = emailContent.html || null;
-              console.log("[RESEND WEBHOOK] Body content - text:", !!textBody, "html:", !!htmlBody);
             } else {
-              console.error("[RESEND WEBHOOK] Failed to fetch email content:", emailContentResponse.status, await emailContentResponse.text());
+              const errorText = await emailContentResponse.text();
+              debugInfo.fetchAttempt.errorText = errorText;
             }
-          } catch (fetchError) {
-            console.error("[RESEND WEBHOOK] Error fetching email content:", fetchError);
+          } catch (fetchError: any) {
+            debugInfo.fetchError = fetchError.message || String(fetchError);
           }
         } else {
-          console.warn("[RESEND WEBHOOK] No RESEND_API_KEY configured, cannot fetch email body");
+          debugInfo.fetchAttempt = { skipped: true, reason: resendApiKey ? 'no email_id' : 'no API key' };
         }
         
-        // Store the inbound email with fetched content
+        // Store the inbound email with fetched content and debug info
         const inboundEmail = await storage.createInboundEmail({
           resendEmailId: data.email_id,
           fromEmail: fromEmail,
@@ -1462,7 +1466,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isReplied: false,
           replyEmailId: null,
           attachments: data.attachments || null,
-          rawPayload: event, // Store the raw webhook payload for reference
+          rawPayload: debugInfo, // Store debug info including webhook payload and fetch result
           receivedAt: new Date(data.created_at || Date.now()),
         });
         
