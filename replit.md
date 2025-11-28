@@ -14,6 +14,11 @@ One Wonder Lake is a data-driven civic advocacy website and political campaign f
 ### UI/UX Decisions
 The platform features a responsive civic design with a deep lake blue theme, prioritizing accessibility and mobile-first interaction. UI components are built with Shadcn/ui. Interactive maps use Leaflet with OpenStreetMap, with zoom/drag locked to enhance user experience.
 
+### Branding
+- **Logo**: Official One Wonder Lake logo displayed prominently in all page headers
+- **Logo Sizing**: Responsive sizing (h-20 mobile, h-28 desktop) with snug header fit
+- **Consistent Branding**: Logo appears on main site navbar and admin dashboard header
+
 ### Technical Implementations
 
 #### Address Eligibility Checker
@@ -60,10 +65,10 @@ A comprehensive email tab in the admin dashboard with full bidirectional email c
 - **Webhook Security**: Svix signature verification protects the inbound webhook endpoint
 The system only sends emails to users who have given contact consent and have not unsubscribed.
 
-**Webhook Configuration Required**: To receive inbound emails, configure a webhook in Resend dashboard:
-- URL: `https://{your-domain}/api/webhooks/resend`
+**Webhook Configuration (Completed)**:
+- Endpoint URL: `https://onewonderlake.replit.app/api/webhooks/resend`
 - Event: `email.received`
-- Copy the webhook secret and add as `RESEND_WEBHOOK_SECRET` environment variable
+- Webhook secret stored as `RESEND_WEBHOOK_SECRET` environment variable
 
 #### Campaign Arguments (Mission Pillars)
 Six clickable pillars on the homepage provide in-depth content on key annexation benefits, such as "Bring State Tax Dollars Home" and "Improve Safety & Services".
@@ -85,6 +90,7 @@ Full-stack JavaScript setup:
 - **Backend**: Express
 - **Database**: PostgreSQL (Neon) via Drizzle ORM
 - **Authentication**: Replit Auth
+- **Email**: Resend API with bidirectional webhook support
 
 ### Database Schema
 - `interested_parties`: Stores resident interest/disinterest, contact info, source, consent, unsubscribe data, and geocoded coordinates (latitude/longitude) for map visualization.
@@ -102,5 +108,12 @@ Full-stack JavaScript setup:
 - **Database**: PostgreSQL (Neon)
 - **ORM**: Drizzle ORM
 - **Authentication**: Replit Auth (OIDC)
+- **Email Service**: Resend API
+- **Webhook Verification**: Svix
 - **UI Components**: Shadcn/ui
 - **Icons**: Lucide React
+
+## Version History
+- **v1.2.0** (2025-11-28): Added logo branding to all page headers, configured Resend webhook for bidirectional email
+- **v1.1.x**: Bidirectional email system with inbox, usage tracking, and auto-shutoff
+- **v1.0.x**: Initial release with address checker, interest forms, admin dashboard, and FAQ system
