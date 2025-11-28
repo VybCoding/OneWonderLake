@@ -1,127 +1,322 @@
 # One Wonder Lake - Civic Advocacy & Annexation Campaign
 
 ## Overview
-One Wonder Lake is a data-driven civic advocacy website and political campaign focused on facilitating municipal annexation in Wonder Lake, Illinois. The platform aims to unite unincorporated neighborhoods with the village government to capture state tax dollars, gain political representation, establish local control, improve safety and services, and define the community's future. It utilizes geospatial analysis and interactive mapping to educate residents, gather support, and understand community sentiment towards a unified village structure.
+One Wonder Lake is a data-driven civic advocacy platform designed to facilitate municipal annexation in Wonder Lake, Illinois. Its primary purpose is to unite unincorporated neighborhoods with the village government to secure state tax dollars, gain political representation, establish local control, and improve community services and safety. The project aims to define the future of the community by educating residents through geospatial analysis and interactive mapping, gathering support, and understanding sentiment towards a unified village structure.
+
+## Current Version
+**v1.3.0** (November 28, 2025)
 
 ## User Preferences
 - Professional governmental aesthetic (no flashy colors or animations)
 - Accessibility-first design (readable by all demographics including seniors)
 - Transparent data sourcing (use official municipal boundaries, cite sources)
 - Mobile-friendly (many residents will view on phones)
+- Do NOT modify opt-out checkbox structure in forms
 
 ## System Architecture
 
-### UI/UX Decisions
-The platform features a responsive civic design with a deep lake blue theme, prioritizing accessibility and mobile-first interaction. UI components are built with Shadcn/ui. Interactive maps use Leaflet with OpenStreetMap, with zoom/drag locked to enhance user experience.
+### Tech Stack
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS |
+| UI Components | Shadcn/ui, Lucide React icons |
+| Backend | Express.js (Node.js) |
+| Database | PostgreSQL (Neon) via Drizzle ORM |
+| Authentication | Replit Auth (OIDC) |
+| Email Service | Resend API with bidirectional webhook |
+| Webhook Security | Svix signature verification |
+| Mapping | Leaflet with OpenStreetMap tiles |
+| Geocoding | OpenStreetMap Nominatim API |
+| Geospatial | Turf.js |
+
+### UI/UX Design
+The platform features a responsive civic design with a deep lake blue theme, prioritizing accessibility and mobile-first interaction. Interactive maps utilize Leaflet with OpenStreetMap tiles, with zoom and drag functionalities locked to enhance user experience.
 
 ### Branding
-- **Logo**: Official One Wonder Lake logo displayed prominently in all page headers
-- **Logo Sizing**: Responsive sizing (h-20 mobile, h-28 desktop) with snug header fit
-- **Consistent Branding**: Logo appears on main site navbar and admin dashboard header
+- **Logo**: Official One Wonder Lake logo in all page headers
+- **Logo Sizing**: Responsive (h-20 mobile, h-28 desktop)
+- **Consistent Branding**: Logo on navbar, admin header, and admin footer
 
-### Technical Implementations
+## Application Pages
 
-#### Address Eligibility Checker
-An interactive tool using OpenStreetMap geocoding and Turf.js to classify addresses for annexation eligibility. It checks against 30 neighboring McHenry County municipalities, identifies "doughnut hole" islands, and uses a 2-mile distance filter. Features include optimized search, intelligent address normalization, and "Did you mean?" suggestions.
+| Route | Page | Description |
+|-------|------|-------------|
+| `/` | `home.tsx` | Landing page with hero, mission pillars, address checker, FAQ, forms |
+| `/admin` | `admin.tsx` | Protected admin dashboard (Replit Auth) |
+| `/tax-estimator` | `tax-estimator.tsx` | Property tax estimation calculator |
+| `/more-info` | `more-info.tsx` | Detailed campaign pillar content |
+| `/unsubscribe` | `unsubscribe.tsx` | Secure unsubscribe with token validation |
+| `*` | `not-found.tsx` | 404 error page |
 
-#### Interactive Map
-Displays official village boundaries (GeoJSON) and address markers with visual feedback.
+## Public Features
 
-#### Property Tax Estimator
-Calculates post-annexation taxes based on Equalized Assessed Value (EAV) and current tax bills, including a lookup guide for McHenry County property data.
+### Address Eligibility Checker
+Interactive tool using OpenStreetMap geocoding and Turf.js:
+- Checks against 30 McHenry County municipalities
+- Identifies "doughnut hole" islands (unincorporated areas surrounded by village)
+- 2-mile distance filter from village boundary
+- Intelligent address normalization and suggestions
+- All searches logged with coordinates for analytics
 
-#### Dual Interest/Disinterest Tracking System
-Allows residents to express both interest and disinterest in annexation via forms. Submissions include a boolean field for sentiment tracking and are stored in a PostgreSQL database with source tracking.
+### Property Tax Estimator
+Calculates post-annexation taxes:
+- Based on Equalized Assessed Value (EAV)
+- Current tax breakdown by taxing district
+- Village tax levy rate calculations
+- Lookup guide for McHenry County property data
 
-#### Address Search Analytics
-All address lookups are tracked in the database, recording address, result type, municipality name, and timestamp for campaign analytics.
+### Interest/Disinterest Forms
+Dual-tracking system for resident sentiment:
+- Captures: name, email, address, phone, notes
+- Requires explicit contact consent checkbox
+- Generates secure unsubscribe tokens
+- Stores geocoded coordinates for map visualization
+- Source tracking (address_checker vs tax_estimator)
 
-#### Admin Dashboard (Community Sentiment Dashboard)
-A protected `/admin` panel using Replit Auth for campaign organizers. It features statistics cards for interested/not interested counts and total address searches, a clickable filter system for responses, and separate tabs for detailed responses and address search logs. Both tabs support CSV export.
+### Community Questions
+"Have More Questions?" interface:
+- Question submission with category selection
+- Categories: General, Taxes, Property Rights, Services
+- Smart suggestions and rate limiting
+- Routed to admin for review and publishing
 
-#### Admin Map Visualization
-An interactive map tab in the admin dashboard displaying color-coded pins to visualize community sentiment geographically:
-- **Green pins**: Residents interested in annexation
-- **Red pins**: Residents not interested in annexation  
-- **Grey pins**: Searched addresses with no expressed preference
-The map includes the village boundary overlay, summary statistics cards, and clickable popups showing address details. Coordinates are captured during address lookups and stored with interest submissions for geographic analysis.
+### FAQ Section
+Combined static and dynamic content:
+- Search functionality
+- Category filters
+- "New" and "Popular" badges
+- Deep-links to tools (e.g., Tax Estimator)
 
-#### Enhanced FAQ Section with Community Questions
-Combines static and dynamic content with search, category filters, and "New" / "Popular" badges. A "Have More Questions?" chat interface allows users to submit questions, with smart suggestions and rate limiting. FAQ items can include optional `linkTo` properties to deep-link to other tools (e.g., the Tax Estimator from property tax questions).
+### Campaign Pillars (Mission)
+Six clickable pillars with modal detail:
+1. Bring State Tax Dollars Home (with LGDF/MFT calculator)
+2. Gain Political Representation
+3. Establish Local Control
+4. Improve Safety & Services
+5. Define Our Future
+6. Unite Our Community
 
-#### Admin Questions Management
-New admin tabs for managing community questions: "Questions" to view, answer, and publish submitted questions, and "Published FAQs" to manage dynamic FAQs, including adding new ones and tracking view counts.
+## Admin Dashboard
 
-#### Admin Email Communications (Bidirectional)
-A comprehensive email tab in the admin dashboard with full bidirectional email capabilities:
-- **Inbox**: View received emails sent to contact@onewonderlake.com with read/unread status and reply functionality
-- **Sent**: Track all outgoing emails with recipient, subject, status, and timestamp
-- **Quick Reply**: Click-to-compose email responses to recent form submissions (interested parties and community questions)
-- **Compose Email**: Full email composition with HTML support for formatted messages
-- **Reply to Inbound**: Reply directly to emails received in the inbox, with original message quoted
-- **Resend Integration**: Uses Resend API for reliable email delivery from contact@onewonderlake.com
-- **Usage Tracking**: Monthly email counter (sent + received) with visual progress bar
-- **Auto-Shutoff**: Email sending pauses at 2,500/month to stay within free tier (3,000 limit)
-- **Webhook Security**: Svix signature verification protects the inbound webhook endpoint
-The system only sends emails to users who have given contact consent and have not unsubscribed.
+Protected by Replit Auth at `/admin`. Seven main tabs:
 
-**Webhook Configuration (Completed)**:
-- Endpoint URL: `https://onewonderlake.replit.app/api/webhooks/resend`
-- Event: `email.received`
-- Webhook secret stored as `RESEND_WEBHOOK_SECRET` environment variable
+### 1. Responses Tab
+- View interest/disinterest submissions
+- Filter: All, Interested, Not Interested
+- Statistics cards with counts
+- CSV export
 
-#### Campaign Arguments (Mission Pillars)
-Six clickable pillars on the homepage provide in-depth content on key annexation benefits, such as "Bring State Tax Dollars Home" and "Improve Safety & Services".
+### 2. Questions Tab
+- Pending community questions
+- Inline answer functionality
+- Publish to dynamic FAQ
+- Delete questions
 
-#### Interactive Fund Revenue Calculator
-A slider-based calculator embedded in the "Bring State Tax Dollars Home" pillar allows users to adjust population and see real-time LGDF and MFT revenue calculations.
+### 3. Published FAQs Tab
+- Manage dynamic FAQ entries
+- Add new FAQs manually
+- View count tracking
+- Mark as no longer "New"
+- Delete FAQs
 
-#### Privacy & Consent Compliance
-All forms require explicit consent checkboxes. A secure unsubscribe system with cryptographic tokens and a dedicated `/unsubscribe` page is implemented. The database tracks `contactConsent`, `unsubscribed`, and `unsubscribeToken` for privacy compliance.
+### 4. Searches Tab
+- Address lookup logs
+- Filter by result type
+- Municipality assignments
+- CSV export
 
-### Feature Specifications
-- **Precise Boundary Detection**: Uses official GeoJSON data for village and county boundaries.
-- **Doughnut Hole Detection**: Identifies unincorporated islands surrounded by the village.
-- **Data Analysis**: Geospatial analysis for statutory annexation requirements.
+### 5. Map Tab
+Interactive geographic visualization:
+- **Green pins**: Interested residents
+- **Red pins**: Not interested residents
+- **Grey pins**: Searched addresses (no preference)
+- Village boundary overlay
+- Clickable popups with details
+- Summary statistics
 
-### System Design Choices
-Full-stack JavaScript setup:
-- **Frontend**: React, TypeScript, Vite, Tailwind CSS
-- **Backend**: Express
-- **Database**: PostgreSQL (Neon) via Drizzle ORM
-- **Authentication**: Replit Auth
-- **Email**: Resend API with bidirectional webhook support
+### 6. Email Tab
+Bidirectional email with two subtabs:
 
-### Database Schema
-- `interested_parties`: Stores resident interest/disinterest, contact info, source, consent, unsubscribe data, and geocoded coordinates (latitude/longitude) for map visualization.
-- `searched_addresses`: Records address lookups, result types, timestamps, and geocoded coordinates.
-- `community_questions`: Stores submitted questions, submitter info, category, status, answer, and consent data.
-- `dynamic_faqs`: Stores FAQ content, category, view count, and creation metadata.
-- `email_correspondence`: Tracks all sent emails including recipient, subject, body, status, Resend message ID, and relationships to interested parties or community questions.
-- `inbound_emails`: Stores received emails from contact@onewonderlake.com including sender info, subject, body (fetched via Resend API with retry), read/replied status, reply associations, and debug payload.
-- `email_usage`: Tracks monthly email counts (sent + received) for usage monitoring and auto-shutoff enforcement.
-- `contacts`: Unified contact management table aggregating data from interested parties, community questions, and inbound emails. Includes marketing opt-out tracking and bulk messaging support.
+**Inbox:**
+- Master-detail layout
+- Read/unread status indicators
+- Reply with quoted original
+- Delete emails
+- Unread count badge
 
-## External Dependencies
-- **Mapping**: OpenStreetMap (tiles for Leaflet)
-- **Geocoding**: OpenStreetMap Nominatim API
-- **Geospatial Analysis**: Turf.js
-- **Database**: PostgreSQL (Neon)
-- **ORM**: Drizzle ORM
-- **Authentication**: Replit Auth (OIDC)
-- **Email Service**: Resend API
-- **Webhook Verification**: Svix
-- **UI Components**: Shadcn/ui
-- **Icons**: Lucide React
+**Sent:**
+- Outgoing email history
+- Recipient, subject, status, timestamp
+- Click-to-view full content
+
+**Features:**
+- Compose with HTML support
+- Usage tracking (sent + received)
+- Progress bar visualization
+- Auto-shutoff at 2,500/month (free tier limit: 3,000)
+- Respects consent and unsubscribe status
+
+### 7. Contacts Tab
+Unified contact management:
+- Aggregates from: interest forms, questions, inbound emails
+- CRUD operations
+- Filter by interest status and source
+- Marketing opt-out toggle
+- Bulk email with consent enforcement
+- Seed from existing data
+
+### Admin Footer
+- One Wonder Lake logo
+- Version display (v1.3.0)
+- "Protected by Replit Auth"
+- Contact email
+
+## Database Schema
+
+| Table | Purpose |
+|-------|---------|
+| `sessions` | Replit Auth sessions (required) |
+| `users` | User accounts with admin flag |
+| `interested_parties` | Interest submissions with geocoding |
+| `searched_addresses` | Address lookup logs |
+| `community_questions` | Submitted questions |
+| `dynamic_faqs` | Published FAQ entries |
+| `email_correspondence` | Sent emails |
+| `inbound_emails` | Received emails with debug payload |
+| `email_usage` | Monthly email counters |
+| `contacts` | Unified contact list |
+
+### Key Fields
+
+**interested_parties:**
+- `interested` (boolean): true=interested, false=not interested
+- `latitude/longitude`: Geocoded coordinates
+- `contactConsent`, `unsubscribed`, `unsubscribeToken`
+
+**contacts:**
+- `source`: interested_party, community_question, inbound_email, tax_estimator, manual
+- `interestStatus`: interested, not_interested, unknown
+- `marketingOptOut`: Bulk messaging exclusion
+- `relatedEntityId`: Link to source record
+
+**inbound_emails:**
+- `textBody/htmlBody`: Email content (see Known Issues)
+- `rawPayload`: Debug info with fetch attempts
+- `isRead/isReplied`: Status tracking
+
+## API Endpoints
+
+### Public
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/api/searched-address` | Log address lookup |
+| POST | `/api/interested` | Submit interest form |
+| POST | `/api/questions` | Submit question |
+| GET | `/api/dynamic-faqs` | Get FAQs |
+| POST | `/api/dynamic-faqs/:id/view` | Increment view count |
+| POST | `/api/tax/estimate` | Calculate taxes |
+| POST | `/api/tax/breakdown` | Tax breakdown |
+| GET | `/api/village-tax-info` | Village tax rates |
+| POST | `/api/unsubscribe` | Process unsubscribe |
+| GET | `/api/build-info` | Version info |
+
+### Admin (Authenticated)
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/admin/check` | Verify admin status |
+| GET | `/api/admin/interested` | List submissions |
+| GET | `/api/admin/searched-addresses` | List searches |
+| GET | `/api/admin/questions` | List questions |
+| PATCH | `/api/admin/questions/:id/answer` | Answer question |
+| POST | `/api/admin/questions/:id/publish` | Publish to FAQ |
+| DELETE | `/api/admin/questions/:id` | Delete question |
+| POST | `/api/admin/faqs` | Create FAQ |
+| DELETE | `/api/admin/faqs/:id` | Delete FAQ |
+| GET | `/api/admin/map-data` | Map visualization data |
+| POST | `/api/admin/email/send` | Send email |
+| GET | `/api/admin/email/history` | Sent emails |
+| GET | `/api/admin/email/inbox` | Received emails |
+| PATCH | `/api/admin/email/inbox/:id/read` | Mark read |
+| DELETE | `/api/admin/email/inbox/:id` | Delete email |
+| GET | `/api/admin/email/usage` | Usage stats |
+| GET | `/api/admin/contacts` | List contacts |
+| POST | `/api/admin/contacts` | Create contact |
+| PATCH | `/api/admin/contacts/:id` | Update contact |
+| DELETE | `/api/admin/contacts/:id` | Delete contact |
+| POST | `/api/admin/contacts/seed` | Seed contacts |
+| POST | `/api/admin/email/bulk-send` | Bulk email |
+
+### Webhook
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/api/webhooks/resend` | Receive inbound emails |
+
+## Environment Secrets
+
+| Secret | Purpose |
+|--------|---------|
+| `RESEND_API_KEY` | Resend API for sending emails |
+| `RESEND_WEBHOOK_SECRET` | Svix verification for webhooks |
+| `DATABASE_URL` | PostgreSQL connection (auto-configured) |
+
+## Resend Integration
+
+- **From Address**: contact@onewonderlake.com
+- **Webhook URL**: `https://onewonderlake.replit.app/api/webhooks/resend`
+- **Webhook Event**: `email.received`
+- **Security**: Svix signature verification
+
+## Privacy & Compliance
+
+- All forms require explicit consent checkbox
+- Cryptographic unsubscribe tokens
+- Secure `/unsubscribe` page
+- Database tracks: `contactConsent`, `unsubscribed`, `unsubscribeToken`
+- Marketing opt-out in contacts
+- Bulk messaging respects all opt-outs
+
+## Development
+
+```bash
+npm run dev          # Start Express + Vite on port 5000
+npm run db:push      # Push schema to database
+npm run db:push --force  # Force push (use with caution)
+```
+
+## Known Issues
+
+### Email Body Content (FIXED in v1.3.0)
+**Issue**: Inbound email body content was null in the database.
+
+**Root Cause**: 
+- Resend's `email.received` webhook only sends metadata (from, to, subject, email_id)
+- Email body is NOT included in the webhook payload
+- **Original bug**: System was calling `GET https://api.resend.com/emails/{email_id}` (for sent emails)
+- **Fix**: Changed to `GET https://api.resend.com/emails/receiving/{email_id}` (correct endpoint for received emails)
+
+**Current Status**: The system now correctly fetches email body content using the `/receiving/` endpoint with retry logic (3 attempts at 1s, 2s, 3s delays).
 
 ## Version History
-- **v1.3.0** (2025-11-28): 
-  - Added unified Contacts tab with CRUD operations and bulk messaging
-  - Master-detail inbox layout with click-to-read and inline reply
-  - Email body fetching with retry mechanism (Resend API timing fix)
-  - Delete functionality for inbound emails
-  - Admin footer with branding
-- **v1.2.1** (2025-11-28): Email tab now shows unread inbox count as notification badge instead of total usage
-- **v1.2.0** (2025-11-28): Added logo branding to all page headers, configured Resend webhook for bidirectional email
-- **v1.1.x**: Bidirectional email system with inbox, usage tracking, and auto-shutoff
-- **v1.0.x**: Initial release with address checker, interest forms, admin dashboard, and FAQ system
+
+### v1.3.0 (November 28, 2025)
+- Unified Contacts tab with CRUD and bulk messaging
+- Master-detail inbox layout
+- Email body fetch retry mechanism
+- Delete functionality for inbound emails
+- Admin footer with branding
+
+### v1.2.1 (November 28, 2025)
+- Unread inbox count badge on Email tab
+
+### v1.2.0 (November 28, 2025)
+- Logo branding in all headers
+- Resend webhook configuration
+
+### v1.1.x
+- Bidirectional email system
+- Usage tracking and auto-shutoff
+
+### v1.0.x
+- Initial release
+- Address checker, interest forms
+- Admin dashboard, FAQ system

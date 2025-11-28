@@ -1434,12 +1434,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               const attemptInfo: any = { 
                 attempt: attempt + 1, 
-                url: `https://api.resend.com/emails/${data.email_id}`,
+                url: `https://api.resend.com/emails/receiving/${data.email_id}`,
                 timestamp: new Date().toISOString()
               };
               
+              // IMPORTANT: Use the /receiving/ endpoint for inbound emails
+              // The regular /emails/:id endpoint is for SENT emails only
               const emailContentResponse = await fetch(
-                `https://api.resend.com/emails/${data.email_id}`,
+                `https://api.resend.com/emails/receiving/${data.email_id}`,
                 {
                   headers: {
                     'Authorization': `Bearer ${resendApiKey}`,
