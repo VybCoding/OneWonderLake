@@ -295,17 +295,7 @@ export default function FAQ() {
   return (
     <section id="faq" className="py-16 md:py-24 bg-background">
       <div className="max-w-4xl mx-auto px-6 lg:px-8">
-        <h2
-          className="text-3xl md:text-4xl font-bold text-center mb-4 text-foreground"
-          data-testid="text-faq-title"
-        >
-          Frequently Asked Questions
-        </h2>
-        <p className="text-center text-muted-foreground mb-8 max-w-2xl mx-auto">
-          Find answers to common questions about annexation, property rights, taxes, and village services.
-        </p>
-
-        <Card className="mb-8 p-6 bg-primary/5 border-primary/20">
+        <Card className="mb-12 p-6 bg-primary/5 border-primary/20">
           <h3 className="text-xl font-semibold mb-2 text-foreground flex items-center gap-2">
             <MessageCircleQuestion className="w-5 h-5 text-primary" />
             Have More Questions?
@@ -371,6 +361,16 @@ export default function FAQ() {
             )}
           </div>
         </Card>
+
+        <h2
+          className="text-3xl md:text-4xl font-bold text-center mb-4 text-foreground"
+          data-testid="text-faq-title"
+        >
+          Frequently Asked Questions
+        </h2>
+        <p className="text-center text-muted-foreground mb-8 max-w-2xl mx-auto">
+          Find answers to common questions about annexation, property rights, taxes, and village services.
+        </p>
 
         <div className="mb-8 space-y-4">
           <div className="relative">
