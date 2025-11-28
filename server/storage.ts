@@ -4,6 +4,7 @@ import {
   searchedAddresses,
   communityQuestions,
   dynamicFaqs,
+  emailCorrespondence,
   type User,
   type UpsertUser,
   type InterestedParty,
@@ -14,6 +15,8 @@ import {
   type InsertCommunityQuestion,
   type DynamicFaq,
   type InsertDynamicFaq,
+  type EmailCorrespondence,
+  type InsertEmailCorrespondence,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql } from "drizzle-orm";
@@ -52,6 +55,11 @@ export interface IStorage {
   incrementFaqViewCount(id: string): Promise<void>;
   markFaqNotNew(id: string): Promise<void>;
   deleteDynamicFaq(id: string): Promise<void>;
+  
+  // Email correspondence operations
+  createEmailCorrespondence(email: InsertEmailCorrespondence): Promise<EmailCorrespondence>;
+  getEmailCorrespondence(): Promise<EmailCorrespondence[]>;
+  getEmailCorrespondenceByRelated(relatedType: string, relatedId: string): Promise<EmailCorrespondence[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -268,6 +276,30 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(dynamicFaqs)
       .where(eq(dynamicFaqs.id, id));
+  }
+
+  // Email correspondence operations
+  async createEmailCorrespondence(email: InsertEmailCorrespondence): Promise<EmailCorrespondence> {
+    const [newEmail] = await db
+      .insert(emailCorrespondence)
+      .values(email)
+      .returning();
+    return newEmail;
+  }
+
+  async getEmailCorrespondence(): Promise<EmailCorrespondence[]> {
+    return await db
+      .select()
+      .from(emailCorrespondence)
+      .orderBy(desc(emailCorrespondence.createdAt));
+  }
+
+  async getEmailCorrespondenceByRelated(relatedType: string, relatedId: string): Promise<EmailCorrespondence[]> {
+    return await db
+      .select()
+      .from(emailCorrespondence)
+      .where(eq(emailCorrespondence.relatedType, relatedType))
+      .orderBy(desc(emailCorrespondence.createdAt));
   }
 }
 

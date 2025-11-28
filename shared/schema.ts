@@ -172,6 +172,30 @@ export const insertDynamicFaqSchema = createInsertSchema(dynamicFaqs).omit({
 export type InsertDynamicFaq = z.infer<typeof insertDynamicFaqSchema>;
 export type DynamicFaq = typeof dynamicFaqs.$inferSelect;
 
+// Email correspondence - track all emails sent from admin
+export const emailCorrespondence = pgTable("email_correspondence", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  recipientEmail: varchar("recipient_email").notNull(),
+  recipientName: varchar("recipient_name"),
+  subject: varchar("subject").notNull(),
+  htmlBody: text("html_body").notNull(),
+  textBody: text("text_body"),
+  relatedType: varchar("related_type"), // 'interested_party', 'community_question', or null for general
+  relatedId: varchar("related_id"), // ID of the related record
+  sentBy: varchar("sent_by"), // Admin user ID who sent
+  resendId: varchar("resend_id"), // Resend's email ID for tracking
+  status: varchar("status").notNull().default("sent"), // 'sent', 'delivered', 'failed'
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertEmailCorrespondenceSchema = createInsertSchema(emailCorrespondence).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertEmailCorrespondence = z.infer<typeof insertEmailCorrespondenceSchema>;
+export type EmailCorrespondence = typeof emailCorrespondence.$inferSelect;
+
 // Build info type for version tracking
 export interface BuildInfo {
   version: string;

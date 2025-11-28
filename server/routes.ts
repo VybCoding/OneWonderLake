@@ -6,6 +6,7 @@ import { join } from "path";
 import { randomBytes } from "crypto";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { sendEmail } from "./resend";
 import { insertInterestedPartySchema, insertSearchedAddressSchema, insertCommunityQuestionSchema, insertDynamicFaqSchema, type BuildInfo } from "@shared/schema";
 
 function generateUnsubscribeToken(): string {
@@ -834,6 +835,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error validating unsubscribe token:", error);
       res.status(500).json({ valid: false, error: "Failed to validate token" });
+    }
+  });
+
+  // Email sending route (admin only) - Resend integration
+  app.post("/api/admin/email/send", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { to, toName, subject, htmlBody, textBody, relatedType, relatedId } = req.body;
+      
+      if (!to || typeof to !== "string" || !to.includes("@")) {
+        return res.status(400).json({ error: "Valid recipient email is required" });
+      }
+      
+      if (!subject || typeof subject !== "string" || subject.length < 1) {
+        return res.status(400).json({ error: "Subject is required" });
+      }
+      
+      if (!htmlBody || typeof htmlBody !== "string" || htmlBody.length < 1) {
+        return res.status(400).json({ error: "Email body is required" });
+      }
+
+      // Send email via Resend
+      const result = await sendEmail(to, subject, htmlBody, textBody);
+      
+      if (result.error) {
+        console.error("Email send error:", result.error);
+        return res.status(500).json({ error: "Failed to send email", details: result.error });
+      }
+
+      // Store email in correspondence log
+      const emailRecord = await storage.createEmailCorrespondence({
+        recipientEmail: to,
+        recipientName: toName || null,
+        subject,
+        htmlBody,
+        textBody: textBody || null,
+        relatedType: relatedType || null,
+        relatedId: relatedId || null,
+        sentBy: userId,
+        resendId: result.data?.id || null,
+        status: "sent",
+      });
+
+      res.json({ 
+        success: true, 
+        message: "Email sent successfully",
+        emailId: emailRecord.id,
+        resendId: result.data?.id
+      });
+    } catch (error) {
+      console.error("Error sending email:", error);
+      res.status(500).json({ error: "Failed to send email" });
+    }
+  });
+
+  // Get email correspondence history (admin only)
+  app.get("/api/admin/email/history", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const emails = await storage.getEmailCorrespondence();
+      res.json(emails);
+    } catch (error) {
+      console.error("Error fetching email history:", error);
+      res.status(500).json({ error: "Failed to fetch email history" });
     }
   });
 
