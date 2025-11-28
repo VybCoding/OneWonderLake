@@ -28,7 +28,12 @@ import {
   BookOpen,
   Sparkles,
   Trash2,
-  Map
+  Map,
+  Contact as ContactIcon,
+  UserPlus,
+  Filter,
+  MailX,
+  CheckCircle2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -60,7 +65,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { InterestedParty, SearchedAddress, CommunityQuestion, DynamicFaq, EmailCorrespondence, InboundEmail } from "@shared/schema";
+import type { InterestedParty, SearchedAddress, CommunityQuestion, DynamicFaq, EmailCorrespondence, InboundEmail, Contact } from "@shared/schema";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import AdminMap from "@/components/AdminMap";
 import { Inbox, AlertTriangle, Reply, Eye, EyeOff, MailCheck } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
@@ -138,7 +145,29 @@ export default function AdminPage() {
   const [emailBody, setEmailBody] = useState("");
   const [replyingToInboundId, setReplyingToInboundId] = useState<string | null>(null);
   const [viewingInboundEmail, setViewingInboundEmail] = useState<InboundEmail | null>(null);
-  const [emailSubTab, setEmailSubTab] = useState<"inbox" | "sent" | "compose">("inbox");
+  const [emailSubTab, setEmailSubTab] = useState<"inbox" | "sent">("inbox");
+  
+  // Master-detail inbox state
+  const [selectedInboxEmail, setSelectedInboxEmail] = useState<InboundEmail | null>(null);
+  const [inlineReplySubject, setInlineReplySubject] = useState("");
+  const [inlineReplyBody, setInlineReplyBody] = useState("");
+  const [showInlineReply, setShowInlineReply] = useState(false);
+  
+  // Contacts state
+  const [contactFilter, setContactFilter] = useState<"all" | "interested" | "not_interested" | "unknown">("all");
+  const [contactSourceFilter, setContactSourceFilter] = useState<string>("all");
+  const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
+  const [showBulkCompose, setShowBulkCompose] = useState(false);
+  const [bulkSubject, setBulkSubject] = useState("");
+  const [bulkBody, setBulkBody] = useState("");
+  const [showAddContact, setShowAddContact] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [newContactName, setNewContactName] = useState("");
+  const [newContactEmail, setNewContactEmail] = useState("");
+  const [newContactPhone, setNewContactPhone] = useState("");
+  const [newContactAddress, setNewContactAddress] = useState("");
+  const [newContactInterest, setNewContactInterest] = useState<string>("unknown");
+  const [newContactOptOut, setNewContactOptOut] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -231,6 +260,195 @@ export default function AdminPage() {
     enabled: isAuthenticated && adminCheck?.isAdmin,
     retry: false,
   });
+
+  const { 
+    data: contacts, 
+    isLoading: contactsLoading,
+  } = useQuery<Contact[]>({
+    queryKey: ["/api/admin/contacts"],
+    enabled: isAuthenticated && adminCheck?.isAdmin,
+    retry: false,
+  });
+
+  // Delete inbound email mutation
+  const deleteInboundEmailMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("DELETE", `/api/admin/email/inbox/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/email/inbox"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/email/usage"] });
+      toast({
+        title: "Email Deleted",
+        description: "The email has been removed.",
+      });
+      if (selectedInboxEmail) {
+        setSelectedInboxEmail(null);
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete the email. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mark email as read mutation
+  const markEmailReadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("PATCH", `/api/admin/email/inbox/${id}/read`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/email/inbox"] });
+    },
+  });
+
+  // Create contact mutation
+  const createContactMutation = useMutation({
+    mutationFn: async (data: Partial<Contact>) => {
+      const response = await apiRequest("POST", "/api/admin/contacts", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/contacts"] });
+      toast({
+        title: "Contact Created",
+        description: "The contact has been added.",
+      });
+      resetContactForm();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create contact. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update contact mutation
+  const updateContactMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Contact> }) => {
+      const response = await apiRequest("PATCH", `/api/admin/contacts/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/contacts"] });
+      toast({
+        title: "Contact Updated",
+        description: "The contact has been updated.",
+      });
+      resetContactForm();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update contact. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete contact mutation
+  const deleteContactMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("DELETE", `/api/admin/contacts/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/contacts"] });
+      toast({
+        title: "Contact Deleted",
+        description: "The contact has been removed.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete contact. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Seed contacts mutation
+  const seedContactsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/contacts/seed");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/contacts"] });
+      toast({
+        title: "Contacts Imported",
+        description: data.message || "Contacts have been imported from existing data.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to import contacts. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Bulk send mutation
+  const bulkSendMutation = useMutation({
+    mutationFn: async (data: { contactIds: string[]; subject: string; htmlBody: string; textBody?: string }) => {
+      const response = await apiRequest("POST", "/api/admin/email/bulk-send", data);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/email/history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/email/usage"] });
+      toast({
+        title: "Bulk Email Sent",
+        description: data.message || `Successfully sent emails to selected contacts.`,
+      });
+      setSelectedContacts(new Set());
+      setShowBulkCompose(false);
+      setBulkSubject("");
+      setBulkBody("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to send bulk emails. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Helper to reset contact form
+  const resetContactForm = () => {
+    setShowAddContact(false);
+    setEditingContact(null);
+    setNewContactName("");
+    setNewContactEmail("");
+    setNewContactPhone("");
+    setNewContactAddress("");
+    setNewContactInterest("unknown");
+    setNewContactOptOut(false);
+  };
+
+  // Filter contacts based on selected filters
+  const filteredContacts = contacts?.filter(contact => {
+    if (contactFilter !== "all" && contact.interestStatus !== contactFilter) {
+      return false;
+    }
+    if (contactSourceFilter !== "all" && contact.source !== contactSourceFilter) {
+      return false;
+    }
+    return true;
+  }) || [];
+
+  // Get selectable contacts (not opted out or unsubscribed)
+  const selectableContacts = filteredContacts.filter(c => !c.marketingOptOut && !c.unsubscribed);
 
   const answerMutation = useMutation({
     mutationFn: async ({ id, answer, editedQuestion, editedCategory }: { id: string; answer: string; editedQuestion?: string; editedCategory?: string }) => {
@@ -719,6 +937,10 @@ export default function AdminPage() {
                   {inboundEmails.filter(e => !e.isRead).length}
                 </Badge>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="contacts" className="flex items-center gap-2" data-testid="tab-contacts">
+              <ContactIcon className="w-4 h-4" />
+              Contacts ({contacts?.length || 0})
             </TabsTrigger>
           </TabsList>
 
@@ -1359,7 +1581,7 @@ export default function AdminPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <Tabs value={emailSubTab} onValueChange={(v) => setEmailSubTab(v as "inbox" | "sent" | "compose")}>
+                <Tabs value={emailSubTab} onValueChange={(v) => setEmailSubTab(v as "inbox" | "sent")}>
                   <TabsList className="mb-4">
                     <TabsTrigger value="inbox" className="flex items-center gap-2" data-testid="email-subtab-inbox">
                       <Inbox className="w-4 h-4" />
@@ -1374,13 +1596,9 @@ export default function AdminPage() {
                       <Send className="w-4 h-4" />
                       Sent
                     </TabsTrigger>
-                    <TabsTrigger value="compose" className="flex items-center gap-2" data-testid="email-subtab-quick">
-                      <Users className="w-4 h-4" />
-                      Quick Reply
-                    </TabsTrigger>
                   </TabsList>
 
-                  {/* Inbox Tab */}
+                  {/* Inbox Tab - Master-Detail Layout */}
                   <TabsContent value="inbox">
                     {inboundEmailsLoading ? (
                       <div className="text-center py-8">
@@ -1396,100 +1614,213 @@ export default function AdminPage() {
                         </p>
                       </div>
                     ) : (
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-8"></TableHead>
-                              <TableHead>From</TableHead>
-                              <TableHead>Subject</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Received</TableHead>
-                              <TableHead className="w-24">Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {inboundEmails.map((email) => (
-                              <TableRow 
-                                key={email.id} 
-                                className={!email.isRead ? "bg-muted/30" : ""}
-                                data-testid={`row-inbox-${email.id}`}
-                              >
-                                <TableCell>
-                                  {!email.isRead ? (
-                                    <div className="w-2 h-2 rounded-full bg-primary" title="Unread" />
-                                  ) : (
-                                    <Eye className="w-3 h-3 text-muted-foreground" title="Read" />
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  <div>
-                                    <p className={`text-sm ${!email.isRead ? "font-semibold" : ""}`}>
-                                      {email.fromName || email.fromEmail}
-                                    </p>
-                                    {email.fromName && (
-                                      <p className="text-xs text-muted-foreground">{email.fromEmail}</p>
+                      <div className="flex gap-4 min-h-[500px]">
+                        {/* Email List (Master) */}
+                        <div className="w-1/3 border rounded-lg overflow-hidden">
+                          <ScrollArea className="h-[500px]">
+                            <div className="divide-y">
+                              {inboundEmails.map((email) => (
+                                <div 
+                                  key={email.id}
+                                  className={`p-3 cursor-pointer hover-elevate ${
+                                    selectedInboxEmail?.id === email.id 
+                                      ? "bg-primary/10 border-l-2 border-primary" 
+                                      : !email.isRead 
+                                        ? "bg-muted/30" 
+                                        : ""
+                                  }`}
+                                  onClick={() => {
+                                    setSelectedInboxEmail(email);
+                                    setShowInlineReply(false);
+                                    if (!email.isRead) {
+                                      markEmailReadMutation.mutate(email.id);
+                                    }
+                                  }}
+                                  data-testid={`inbox-item-${email.id}`}
+                                >
+                                  <div className="flex items-start gap-2">
+                                    {!email.isRead && (
+                                      <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <p className={`text-sm truncate ${!email.isRead ? "font-semibold" : ""}`}>
+                                          {email.fromName || email.fromEmail}
+                                        </p>
+                                        <span className="text-xs text-muted-foreground flex-shrink-0">
+                                          {email.receivedAt ? format(new Date(email.receivedAt), "MMM d") : ""}
+                                        </span>
+                                      </div>
+                                      <p className={`text-sm truncate ${!email.isRead ? "font-medium" : "text-muted-foreground"}`}>
+                                        {email.subject}
+                                      </p>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        {email.isReplied && (
+                                          <Badge variant="secondary" className="text-xs h-5">
+                                            <Reply className="w-3 h-3 mr-1" />
+                                            Replied
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </div>
+
+                        {/* Email Detail (Detail) */}
+                        <div className="flex-1 border rounded-lg p-4">
+                          {selectedInboxEmail ? (
+                            <div className="h-full flex flex-col">
+                              {/* Email Header */}
+                              <div className="flex items-start justify-between mb-4 pb-4 border-b">
+                                <div className="flex-1">
+                                  <h3 className="text-lg font-semibold">{selectedInboxEmail.subject}</h3>
+                                  <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                                    <span className="font-medium text-foreground">
+                                      {selectedInboxEmail.fromName || selectedInboxEmail.fromEmail}
+                                    </span>
+                                    {selectedInboxEmail.fromName && (
+                                      <span>&lt;{selectedInboxEmail.fromEmail}&gt;</span>
                                     )}
                                   </div>
-                                </TableCell>
-                                <TableCell>
-                                  <p className={`max-w-[200px] truncate ${!email.isRead ? "font-medium" : ""}`}>
-                                    {email.subject}
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {selectedInboxEmail.receivedAt 
+                                      ? format(new Date(selectedInboxEmail.receivedAt), "MMMM d, yyyy 'at' h:mm a")
+                                      : ""
+                                    }
                                   </p>
-                                </TableCell>
-                                <TableCell>
-                                  {email.isReplied ? (
-                                    <Badge variant="secondary" className="flex items-center gap-1 w-fit">
-                                      <Reply className="w-3 h-3" />
-                                      Replied
-                                    </Badge>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Button 
+                                    size="icon" 
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setShowInlineReply(true);
+                                      setInlineReplySubject(`Re: ${selectedInboxEmail.subject}`);
+                                      setInlineReplyBody("");
+                                    }}
+                                    disabled={emailUsage?.isShutoff}
+                                    title="Reply"
+                                    data-testid="button-inline-reply"
+                                  >
+                                    <Reply className="w-4 h-4" />
+                                  </Button>
+                                  <Button 
+                                    size="icon" 
+                                    variant="ghost"
+                                    onClick={() => {
+                                      if (confirm("Are you sure you want to delete this email?")) {
+                                        deleteInboundEmailMutation.mutate(selectedInboxEmail.id);
+                                      }
+                                    }}
+                                    title="Delete"
+                                    data-testid="button-delete-email"
+                                  >
+                                    <Trash2 className="w-4 h-4 text-destructive" />
+                                  </Button>
+                                </div>
+                              </div>
+
+                              {/* Email Body */}
+                              <ScrollArea className="flex-1 mb-4">
+                                <div className="prose prose-sm max-w-none dark:prose-invert">
+                                  {selectedInboxEmail.htmlBody ? (
+                                    <div dangerouslySetInnerHTML={{ __html: selectedInboxEmail.htmlBody }} />
+                                  ) : selectedInboxEmail.textBody ? (
+                                    <pre className="whitespace-pre-wrap font-sans text-sm">{selectedInboxEmail.textBody}</pre>
                                   ) : (
-                                    <Badge variant="outline">Pending</Badge>
+                                    <p className="text-muted-foreground italic">No message content available</p>
                                   )}
-                                </TableCell>
-                                <TableCell>
-                                  <span className="text-sm text-muted-foreground">
-                                    {email.receivedAt ? format(new Date(email.receivedAt), "MMM d, h:mm a") : "-"}
-                                  </span>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-1">
+                                </div>
+                              </ScrollArea>
+
+                              {/* Inline Reply Form */}
+                              {showInlineReply && (
+                                <div className="border-t pt-4 space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="font-medium">Reply to {selectedInboxEmail.fromName || selectedInboxEmail.fromEmail}</h4>
                                     <Button 
                                       size="icon" 
                                       variant="ghost"
-                                      onClick={() => setViewingInboundEmail(email)}
-                                      title="View Email"
-                                      data-testid={`button-view-email-${email.id}`}
+                                      onClick={() => setShowInlineReply(false)}
                                     >
-                                      <Eye className="w-4 h-4" />
-                                    </Button>
-                                    <Button 
-                                      size="icon" 
-                                      variant="ghost"
-                                      disabled={emailUsage?.isShutoff}
-                                      onClick={() => {
-                                        setEmailRecipient({ 
-                                          email: email.fromEmail, 
-                                          name: email.fromName || email.fromEmail, 
-                                          type: "inbound_reply", 
-                                          id: email.id 
-                                        });
-                                        setReplyingToInboundId(email.id);
-                                        setEmailSubject(`Re: ${email.subject}`);
-                                        setEmailBody(`<p>Thank you for your email.</p><p></p><p>Best regards,<br/>One Wonder Lake Team</p><hr/><p><em>On ${format(new Date(email.receivedAt), "MMM d, yyyy")} ${email.fromName || email.fromEmail} wrote:</em></p><blockquote style="border-left: 2px solid #ccc; padding-left: 10px; margin-left: 10px; color: #666;">${email.textBody || email.subject}</blockquote>`);
-                                        setShowComposeEmail(true);
-                                      }}
-                                      title="Reply"
-                                      data-testid={`button-reply-email-${email.id}`}
-                                    >
-                                      <Reply className="w-4 h-4" />
+                                      <X className="w-4 h-4" />
                                     </Button>
                                   </div>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
+                                  <Input
+                                    value={inlineReplySubject}
+                                    onChange={(e) => setInlineReplySubject(e.target.value)}
+                                    placeholder="Subject"
+                                    data-testid="input-inline-reply-subject"
+                                  />
+                                  <Textarea
+                                    value={inlineReplyBody}
+                                    onChange={(e) => setInlineReplyBody(e.target.value)}
+                                    placeholder="Write your response here... (HTML supported)"
+                                    className="min-h-[120px] font-mono text-sm"
+                                    data-testid="textarea-inline-reply-body"
+                                  />
+                                  <div className="flex justify-end gap-2">
+                                    <Button 
+                                      variant="outline" 
+                                      onClick={() => setShowInlineReply(false)}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      onClick={() => {
+                                        if (!inlineReplySubject || !inlineReplyBody) {
+                                          toast({
+                                            title: "Missing Fields",
+                                            description: "Please enter a subject and message.",
+                                            variant: "destructive",
+                                          });
+                                          return;
+                                        }
+                                        sendEmailMutation.mutate({
+                                          to: selectedInboxEmail.fromEmail,
+                                          toName: selectedInboxEmail.fromName || undefined,
+                                          subject: inlineReplySubject,
+                                          htmlBody: inlineReplyBody.includes("<") ? inlineReplyBody : `<p>${inlineReplyBody.replace(/\n/g, "</p><p>")}</p>`,
+                                          relatedType: "inbound_reply",
+                                          relatedId: selectedInboxEmail.id,
+                                          inReplyToEmailId: selectedInboxEmail.id,
+                                        });
+                                        setShowInlineReply(false);
+                                        setInlineReplySubject("");
+                                        setInlineReplyBody("");
+                                      }}
+                                      disabled={sendEmailMutation.isPending}
+                                      data-testid="button-send-inline-reply"
+                                    >
+                                      {sendEmailMutation.isPending ? (
+                                        <>
+                                          <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-current mr-2" />
+                                          Sending...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Send className="w-4 h-4 mr-2" />
+                                          Send Reply
+                                        </>
+                                      )}
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="h-full flex items-center justify-center text-muted-foreground">
+                              <div className="text-center">
+                                <Mail className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                                <p>Select an email to view</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </TabsContent>
@@ -1548,87 +1879,252 @@ export default function AdminPage() {
                     )}
                   </TabsContent>
 
-                  {/* Quick Reply Tab */}
-                  <TabsContent value="compose">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Interested Parties who can receive emails */}
-                      <Card className="border-dashed">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-sm flex items-center gap-2">
-                            <Users className="w-4 h-4" />
-                            Recent Interested Parties
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                          {interestedParties?.filter(p => p.contactConsent && !p.unsubscribed).slice(0, 5).map((party) => (
-                            <div 
-                              key={party.id} 
-                              className="flex items-center justify-between p-2 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
-                              onClick={() => {
-                                if (!emailUsage?.isShutoff) {
-                                  setEmailRecipient({ email: party.email, name: party.name, type: "interested_party", id: party.id });
-                                  setEmailSubject("Re: Your Interest in Wonder Lake Annexation");
-                                  setEmailBody(`<p>Dear ${party.name},</p><p>Thank you for expressing your interest in the Wonder Lake annexation initiative.</p><p>Best regards,<br/>One Wonder Lake Team</p>`);
-                                  setShowComposeEmail(true);
-                                }
-                              }}
-                              data-testid={`quick-reply-party-${party.id}`}
-                            >
-                              <div>
-                                <p className="text-sm font-medium">{party.name}</p>
-                                <p className="text-xs text-muted-foreground">{party.email}</p>
-                              </div>
-                              <Button size="icon" variant="ghost" disabled={emailUsage?.isShutoff}>
-                                <Send className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          ))}
-                          {(!interestedParties || interestedParties.filter(p => p.contactConsent && !p.unsubscribed).length === 0) && (
-                            <p className="text-sm text-muted-foreground text-center py-4">No contactable parties yet</p>
-                          )}
-                        </CardContent>
-                      </Card>
-
-                      {/* Community Questions that can receive emails */}
-                      <Card className="border-dashed">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-sm flex items-center gap-2">
-                            <MessageCircleQuestion className="w-4 h-4" />
-                            Recent Question Submitters
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                          {communityQuestions?.filter(q => q.contactConsent && !q.unsubscribed).slice(0, 5).map((question) => (
-                            <div 
-                              key={question.id} 
-                              className="flex items-center justify-between p-2 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
-                              onClick={() => {
-                                if (!emailUsage?.isShutoff) {
-                                  setEmailRecipient({ email: question.email, name: question.name, type: "community_question", id: question.id });
-                                  setEmailSubject("Re: Your Question about Wonder Lake Annexation");
-                                  setEmailBody(`<p>Dear ${question.name},</p><p>Thank you for your question about the Wonder Lake annexation initiative.</p><p>Your question: "${question.question}"</p><p>Best regards,<br/>One Wonder Lake Team</p>`);
-                                  setShowComposeEmail(true);
-                                }
-                              }}
-                              data-testid={`quick-reply-question-${question.id}`}
-                            >
-                              <div>
-                                <p className="text-sm font-medium">{question.name}</p>
-                                <p className="text-xs text-muted-foreground line-clamp-1">{question.question}</p>
-                              </div>
-                              <Button size="icon" variant="ghost" disabled={emailUsage?.isShutoff}>
-                                <Send className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          ))}
-                          {(!communityQuestions || communityQuestions.filter(q => q.contactConsent && !q.unsubscribed).length === 0) && (
-                            <p className="text-sm text-muted-foreground text-center py-4">No contactable question submitters yet</p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </TabsContent>
                 </Tabs>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Contacts Tab */}
+          <TabsContent value="contacts" data-testid="tab-content-contacts">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex-1">
+                    <CardTitle className="flex items-center gap-2">
+                      <ContactIcon className="w-5 h-5" />
+                      Unified Contacts
+                    </CardTitle>
+                    <CardDescription>
+                      All contacts from interested parties, questions, and emails
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => seedContactsMutation.mutate()}
+                      disabled={seedContactsMutation.isPending}
+                      data-testid="button-seed-contacts"
+                    >
+                      {seedContactsMutation.isPending ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-current mr-2" />
+                      ) : (
+                        <Download className="w-4 h-4 mr-2" />
+                      )}
+                      Import from Existing
+                    </Button>
+                    <Button 
+                      onClick={() => setShowAddContact(true)}
+                      data-testid="button-add-contact"
+                    >
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Add Contact
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Filters */}
+                <div className="flex items-center gap-4 mt-4 pt-4 border-t flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Filter:</span>
+                  </div>
+                  <Select value={contactFilter} onValueChange={(v) => setContactFilter(v as any)}>
+                    <SelectTrigger className="w-[160px]" data-testid="select-contact-filter">
+                      <SelectValue placeholder="Interest Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Contacts</SelectItem>
+                      <SelectItem value="interested">Interested</SelectItem>
+                      <SelectItem value="not_interested">Not Interested</SelectItem>
+                      <SelectItem value="unknown">Unknown</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={contactSourceFilter} onValueChange={setContactSourceFilter}>
+                    <SelectTrigger className="w-[180px]" data-testid="select-source-filter">
+                      <SelectValue placeholder="Source" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Sources</SelectItem>
+                      <SelectItem value="interested_party">Interest Form</SelectItem>
+                      <SelectItem value="community_question">Question Form</SelectItem>
+                      <SelectItem value="inbound_email">Inbound Email</SelectItem>
+                      <SelectItem value="manual">Manual Entry</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  {/* Bulk Actions */}
+                  {selectedContacts.size > 0 && (
+                    <div className="flex items-center gap-2 ml-auto">
+                      <Badge variant="secondary">
+                        {selectedContacts.size} selected
+                      </Badge>
+                      <Button 
+                        size="sm"
+                        onClick={() => setShowBulkCompose(true)}
+                        disabled={emailUsage?.isShutoff}
+                        data-testid="button-bulk-compose"
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        Send Bulk Email
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setSelectedContacts(new Set())}
+                      >
+                        Clear Selection
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {contactsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto mb-2"></div>
+                    <p className="text-muted-foreground">Loading contacts...</p>
+                  </div>
+                ) : filteredContacts.length === 0 ? (
+                  <div className="text-center py-12 border rounded-lg border-dashed">
+                    <ContactIcon className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
+                    <p className="text-muted-foreground text-lg mb-2">No contacts found</p>
+                    <p className="text-sm text-muted-foreground">
+                      Add contacts manually or import from existing data.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-10">
+                            <Checkbox 
+                              checked={selectedContacts.size === selectableContacts.length && selectableContacts.length > 0}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedContacts(new Set(selectableContacts.map(c => c.id)));
+                                } else {
+                                  setSelectedContacts(new Set());
+                                }
+                              }}
+                              data-testid="checkbox-select-all"
+                            />
+                          </TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Interest</TableHead>
+                          <TableHead>Source</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="w-24">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredContacts.map((contact) => (
+                          <TableRow key={contact.id} data-testid={`row-contact-${contact.id}`}>
+                            <TableCell>
+                              <Checkbox 
+                                checked={selectedContacts.has(contact.id)}
+                                disabled={contact.marketingOptOut || contact.unsubscribed}
+                                onCheckedChange={(checked) => {
+                                  const newSet = new Set(selectedContacts);
+                                  if (checked) {
+                                    newSet.add(contact.id);
+                                  } else {
+                                    newSet.delete(contact.id);
+                                  }
+                                  setSelectedContacts(newSet);
+                                }}
+                                data-testid={`checkbox-contact-${contact.id}`}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <p className="font-medium">{contact.name}</p>
+                              {contact.phone && (
+                                <p className="text-xs text-muted-foreground">{contact.phone}</p>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <a href={`mailto:${contact.email}`} className="text-primary hover:underline text-sm">
+                                {contact.email}
+                              </a>
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant={contact.interestStatus === "interested" ? "default" : contact.interestStatus === "not_interested" ? "destructive" : "outline"}
+                                className={contact.interestStatus === "interested" ? "bg-green-600" : ""}
+                              >
+                                {contact.interestStatus === "interested" && <ThumbsUp className="w-3 h-3 mr-1" />}
+                                {contact.interestStatus === "not_interested" && <ThumbsDown className="w-3 h-3 mr-1" />}
+                                {contact.interestStatus === "interested" ? "Interested" : contact.interestStatus === "not_interested" ? "Not Interested" : "Unknown"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm text-muted-foreground">
+                                {contact.source === "interested_party" ? "Interest Form" : 
+                                 contact.source === "community_question" ? "Question Form" : 
+                                 contact.source === "inbound_email" ? "Inbound Email" : 
+                                 contact.source === "manual" ? "Manual" : contact.source}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              {contact.unsubscribed ? (
+                                <Badge variant="destructive" className="text-xs">
+                                  <MailX className="w-3 h-3 mr-1" />
+                                  Unsubscribed
+                                </Badge>
+                              ) : contact.marketingOptOut ? (
+                                <Badge variant="secondary" className="text-xs">
+                                  <EyeOff className="w-3 h-3 mr-1" />
+                                  Opted Out
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-xs">
+                                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                                  Active
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Button 
+                                  size="icon" 
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setEditingContact(contact);
+                                    setNewContactName(contact.name);
+                                    setNewContactEmail(contact.email);
+                                    setNewContactPhone(contact.phone || "");
+                                    setNewContactAddress(contact.address || "");
+                                    setNewContactInterest(contact.interestStatus || "unknown");
+                                    setNewContactOptOut(contact.marketingOptOut || false);
+                                    setShowAddContact(true);
+                                  }}
+                                  title="Edit"
+                                  data-testid={`button-edit-contact-${contact.id}`}
+                                >
+                                  <FileText className="w-4 h-4" />
+                                </Button>
+                                <Button 
+                                  size="icon" 
+                                  variant="ghost"
+                                  onClick={() => {
+                                    if (confirm(`Are you sure you want to delete ${contact.name}?`)) {
+                                      deleteContactMutation.mutate(contact.id);
+                                    }
+                                  }}
+                                  title="Delete"
+                                  data-testid={`button-delete-contact-${contact.id}`}
+                                >
+                                  <Trash2 className="w-4 h-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1643,6 +2139,200 @@ export default function AdminPage() {
           </Button>
         </div>
       </main>
+
+      {/* Add/Edit Contact Dialog */}
+      <Dialog open={showAddContact} onOpenChange={(open) => !open && resetContactForm()}>
+        <DialogContent data-testid="dialog-add-contact">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5" />
+              {editingContact ? "Edit Contact" : "Add Contact"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingContact ? "Update contact information" : "Add a new contact manually"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Name *</label>
+              <Input
+                value={newContactName}
+                onChange={(e) => setNewContactName(e.target.value)}
+                placeholder="Full name"
+                data-testid="input-contact-name"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Email *</label>
+              <Input
+                type="email"
+                value={newContactEmail}
+                onChange={(e) => setNewContactEmail(e.target.value)}
+                placeholder="email@example.com"
+                data-testid="input-contact-email"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Phone</label>
+              <Input
+                value={newContactPhone}
+                onChange={(e) => setNewContactPhone(e.target.value)}
+                placeholder="(555) 555-5555"
+                data-testid="input-contact-phone"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Address</label>
+              <Input
+                value={newContactAddress}
+                onChange={(e) => setNewContactAddress(e.target.value)}
+                placeholder="123 Main St, Wonder Lake, IL"
+                data-testid="input-contact-address"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Interest Status</label>
+              <Select value={newContactInterest} onValueChange={setNewContactInterest}>
+                <SelectTrigger data-testid="select-contact-interest">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unknown">Unknown</SelectItem>
+                  <SelectItem value="interested">Interested</SelectItem>
+                  <SelectItem value="not_interested">Not Interested</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox 
+                id="marketing-opt-out"
+                checked={newContactOptOut}
+                onCheckedChange={(checked) => setNewContactOptOut(checked as boolean)}
+                data-testid="checkbox-opt-out"
+              />
+              <label htmlFor="marketing-opt-out" className="text-sm">
+                Marketing Opt-Out (exclude from bulk emails)
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={resetContactForm}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!newContactName || !newContactEmail) {
+                    toast({
+                      title: "Missing Fields",
+                      description: "Name and email are required.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  const contactData = {
+                    name: newContactName,
+                    email: newContactEmail,
+                    phone: newContactPhone || undefined,
+                    address: newContactAddress || undefined,
+                    source: "manual" as const,
+                    interestStatus: newContactInterest as "interested" | "not_interested" | "unknown",
+                    contactConsent: true,
+                    marketingOptOut: newContactOptOut,
+                    unsubscribed: false,
+                  };
+                  
+                  if (editingContact) {
+                    updateContactMutation.mutate({ id: editingContact.id, data: contactData });
+                  } else {
+                    createContactMutation.mutate(contactData);
+                  }
+                }}
+                disabled={createContactMutation.isPending || updateContactMutation.isPending}
+                data-testid="button-save-contact"
+              >
+                {(createContactMutation.isPending || updateContactMutation.isPending) ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-current mr-2" />
+                ) : (
+                  <Check className="w-4 h-4 mr-2" />
+                )}
+                {editingContact ? "Update" : "Add"} Contact
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Compose Dialog */}
+      <Dialog open={showBulkCompose} onOpenChange={setShowBulkCompose}>
+        <DialogContent className="max-w-2xl" data-testid="dialog-bulk-compose">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5" />
+              Send Bulk Email
+            </DialogTitle>
+            <DialogDescription>
+              Send email to {selectedContacts.size} selected contact(s). Opted-out contacts will be skipped.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Subject *</label>
+              <Input
+                value={bulkSubject}
+                onChange={(e) => setBulkSubject(e.target.value)}
+                placeholder="Email subject..."
+                data-testid="input-bulk-subject"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Message (HTML supported) *</label>
+              <Textarea
+                value={bulkBody}
+                onChange={(e) => setBulkBody(e.target.value)}
+                placeholder="<p>Dear Resident,</p><p>Your message here...</p>"
+                className="min-h-[200px] font-mono text-sm"
+                data-testid="textarea-bulk-body"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setShowBulkCompose(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!bulkSubject || !bulkBody) {
+                    toast({
+                      title: "Missing Fields",
+                      description: "Subject and message are required.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  bulkSendMutation.mutate({
+                    contactIds: Array.from(selectedContacts),
+                    subject: bulkSubject,
+                    htmlBody: bulkBody.includes("<") ? bulkBody : `<p>${bulkBody.replace(/\n/g, "</p><p>")}</p>`,
+                  });
+                }}
+                disabled={bulkSendMutation.isPending || emailUsage?.isShutoff}
+                data-testid="button-send-bulk"
+              >
+                {bulkSendMutation.isPending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-current mr-2" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Send to {selectedContacts.size} Contact(s)
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Party Details Dialog */}
       <Dialog open={!!selectedParty} onOpenChange={(open) => !open && setSelectedParty(null)}>
