@@ -114,6 +114,7 @@ Full-stack JavaScript setup:
 - **Icons**: Lucide React
 
 ## Version History
+- **v1.2.1** (2025-11-28): Email tab now shows unread inbox count as notification badge instead of total usage
 - **v1.2.0** (2025-11-28): Added logo branding to all page headers, configured Resend webhook for bidirectional email
 - **v1.1.x**: Bidirectional email system with inbox, usage tracking, and auto-shutoff
 - **v1.0.x**: Initial release with address checker, interest forms, admin dashboard, and FAQ system
