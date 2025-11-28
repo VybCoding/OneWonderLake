@@ -528,13 +528,13 @@ export default function AdminPage() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-primary text-primary-foreground shadow-md">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between min-h-24">
             <div className="flex items-center gap-4">
               <Link href="/" className="hover:opacity-80 transition-opacity flex items-center">
                 <img 
                   src={logoImage} 
                   alt="One Wonder Lake - Promoting Unity" 
-                  className="h-10 md:h-12 w-auto"
+                  className="h-32 md:h-48 w-auto"
                 />
               </Link>
               <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground">

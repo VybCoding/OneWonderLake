@@ -49,7 +49,7 @@ export default function Navbar({ onNavClick }: NavbarProps) {
   return (
     <nav className="sticky top-0 z-[1000] bg-primary text-primary-foreground shadow-md">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between min-h-24">
           {/* Logo */}
           <div className="flex-shrink-0">
             <a 
@@ -61,7 +61,7 @@ export default function Navbar({ onNavClick }: NavbarProps) {
               <img 
                 src={logoImage} 
                 alt="One Wonder Lake - Promoting Unity" 
-                className="h-10 md:h-12 w-auto"
+                className="h-32 md:h-48 w-auto"
               />
             </a>
           </div>
