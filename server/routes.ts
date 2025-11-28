@@ -1379,9 +1379,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("[RESEND WEBHOOK] Received event:", event.type);
       
+      // Log the FULL raw payload for debugging
+      console.log("[RESEND WEBHOOK] FULL RAW PAYLOAD:", JSON.stringify(event, null, 2));
+      
       // Handle email.received event
       if (event.type === "email.received") {
         const data = event.data;
+        
+        // Log all keys at every level to find where the body content is
+        console.log("[RESEND WEBHOOK] Top-level event keys:", Object.keys(event));
+        console.log("[RESEND WEBHOOK] Data keys:", Object.keys(data));
         
         // Check if we already processed this email
         const existing = await storage.getInboundEmailByResendId(data.email_id);
@@ -1405,30 +1412,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fromName = fromMatch[1]?.trim() || null;
         const fromEmail = fromMatch[2]?.trim() || data.from;
 
-        // Log the full data structure for debugging
-        console.log("[RESEND WEBHOOK] Full email data keys:", Object.keys(data));
-        console.log("[RESEND WEBHOOK] Email body structure:", {
-          hasBody: !!data.body,
-          bodyType: typeof data.body,
-          bodyKeys: data.body ? Object.keys(data.body) : [],
-          hasText: !!data.text,
-          hasHtml: !!data.html,
+        // Log ALL possible body field locations for debugging
+        console.log("[RESEND WEBHOOK] Body field analysis:", {
+          // Direct fields
+          "data.text": data.text?.substring?.(0, 100) || data.text,
+          "data.html": data.html?.substring?.(0, 100) || data.html,
+          "data.body": typeof data.body === 'string' ? data.body.substring(0, 100) : data.body,
+          // Nested in body object
+          "data.body?.text": data.body?.text?.substring?.(0, 100),
+          "data.body?.html": data.body?.html?.substring?.(0, 100),
+          // Other possible locations
+          "data.content": data.content,
+          "data.message": data.message,
+          "data.plain_body": data.plain_body,
+          "data.html_body": data.html_body,
         });
         
-        // Parse email body - Resend can send body in different formats:
-        // 1. Nested: { body: { text: "...", html: "..." } }
-        // 2. Flat: { text: "...", html: "..." }
+        // Parse email body - try ALL possible locations where Resend might put body content
         let textBody = null;
         let htmlBody = null;
         
+        // Try nested body object first
         if (data.body && typeof data.body === 'object') {
-          // Nested format: body.text and body.html
-          textBody = data.body.text || null;
+          textBody = data.body.text || data.body.plain || null;
           htmlBody = data.body.html || null;
-        } else {
-          // Flat format or string body
-          textBody = data.text || (typeof data.body === 'string' ? data.body : null);
-          htmlBody = data.html || null;
+        }
+        
+        // Fall back to flat fields
+        if (!textBody) {
+          textBody = data.text || data.plain_body || data.plain || 
+                     (typeof data.body === 'string' ? data.body : null) ||
+                     data.content?.text || null;
+        }
+        if (!htmlBody) {
+          htmlBody = data.html || data.html_body || 
+                     data.content?.html || null;
         }
         
         // Store the inbound email with parsed content
