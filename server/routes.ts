@@ -1453,7 +1453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                      data.content?.html || null;
         }
         
-        // Store the inbound email with parsed content
+        // Store the inbound email with parsed content AND raw payload for debugging
         const inboundEmail = await storage.createInboundEmail({
           resendEmailId: data.email_id,
           fromEmail: fromEmail,
@@ -1468,6 +1468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isReplied: false,
           replyEmailId: null,
           attachments: data.attachments || null,
+          rawPayload: event, // Store the full raw webhook payload for debugging
           receivedAt: new Date(data.created_at || Date.now()),
         });
         

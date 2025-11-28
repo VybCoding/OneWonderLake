@@ -212,6 +212,7 @@ export const inboundEmails = pgTable("inbound_emails", {
   isReplied: boolean("is_replied").default(false),
   replyEmailId: varchar("reply_email_id"), // ID of our reply email_correspondence record
   attachments: jsonb("attachments"), // Array of attachment metadata
+  rawPayload: jsonb("raw_payload"), // Raw webhook payload for debugging
   receivedAt: timestamp("received_at").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
