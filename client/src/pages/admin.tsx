@@ -119,6 +119,7 @@ export default function AdminPage() {
   // Email compose state
   const [showComposeEmail, setShowComposeEmail] = useState(false);
   const [emailRecipient, setEmailRecipient] = useState<{ email: string; name: string; type: string; id: string } | null>(null);
+  const [manualEmailTo, setManualEmailTo] = useState("");
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
 
@@ -323,6 +324,7 @@ export default function AdminPage() {
       });
       setShowComposeEmail(false);
       setEmailRecipient(null);
+      setManualEmailTo("");
       setEmailSubject("");
       setEmailBody("");
     },
@@ -1256,6 +1258,7 @@ export default function AdminPage() {
                   <Button 
                     onClick={() => {
                       setEmailRecipient(null);
+                      setManualEmailTo("");
                       setEmailSubject("");
                       setEmailBody("");
                       setShowComposeEmail(true);
@@ -1697,21 +1700,25 @@ export default function AdminPage() {
               {emailRecipient ? (
                 <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
                   <div>
-                    <p className="font-medium">{emailRecipient.name}</p>
+                    <p className="font-medium">{emailRecipient.name || "Manual Entry"}</p>
                     <p className="text-sm text-muted-foreground">{emailRecipient.email}</p>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setEmailRecipient(null)}
+                    onClick={() => {
+                      setEmailRecipient(null);
+                      setManualEmailTo("");
+                    }}
                   >
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
               ) : (
                 <Input
+                  value={manualEmailTo}
                   placeholder="Enter recipient email..."
-                  onChange={(e) => setEmailRecipient({ email: e.target.value, name: "", type: "", id: "" })}
+                  onChange={(e) => setManualEmailTo(e.target.value)}
                   data-testid="input-email-to"
                 />
               )}
@@ -1756,19 +1763,20 @@ export default function AdminPage() {
               </Button>
               <Button
                 onClick={() => {
-                  if (emailRecipient?.email && emailSubject.trim() && emailBody.trim()) {
+                  const recipientEmail = emailRecipient?.email || manualEmailTo.trim();
+                  if (recipientEmail && emailSubject.trim() && emailBody.trim()) {
                     sendEmailMutation.mutate({
-                      to: emailRecipient.email,
-                      toName: emailRecipient.name || undefined,
+                      to: recipientEmail,
+                      toName: emailRecipient?.name || undefined,
                       subject: emailSubject,
                       htmlBody: emailBody,
-                      relatedType: emailRecipient.type || undefined,
-                      relatedId: emailRecipient.id || undefined,
+                      relatedType: emailRecipient?.type || undefined,
+                      relatedId: emailRecipient?.id || undefined,
                     });
                   }
                 }}
                 disabled={
-                  !emailRecipient?.email || 
+                  (!emailRecipient?.email && !manualEmailTo.trim()) || 
                   !emailSubject.trim() || 
                   !emailBody.trim() || 
                   sendEmailMutation.isPending
