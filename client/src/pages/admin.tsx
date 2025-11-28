@@ -60,8 +60,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { InterestedParty, SearchedAddress, CommunityQuestion, DynamicFaq, EmailCorrespondence } from "@shared/schema";
+import type { InterestedParty, SearchedAddress, CommunityQuestion, DynamicFaq, EmailCorrespondence, InboundEmail } from "@shared/schema";
 import AdminMap from "@/components/AdminMap";
+import { Inbox, AlertTriangle, Reply, Eye, EyeOff, MailCheck } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+
+interface EmailUsageStats {
+  month: string;
+  sent: number;
+  received: number;
+  total: number;
+  monthlyLimit: number;
+  autoShutoffThreshold: number;
+  isShutoff: boolean;
+  remaining: number;
+}
 
 interface MapPin {
   id: string;
@@ -122,6 +135,9 @@ export default function AdminPage() {
   const [manualEmailTo, setManualEmailTo] = useState("");
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
+  const [replyingToInboundId, setReplyingToInboundId] = useState<string | null>(null);
+  const [viewingInboundEmail, setViewingInboundEmail] = useState<InboundEmail | null>(null);
+  const [emailSubTab, setEmailSubTab] = useState<"inbox" | "sent" | "compose">("inbox");
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -193,6 +209,24 @@ export default function AdminPage() {
     isLoading: emailHistoryLoading,
   } = useQuery<EmailCorrespondence[]>({
     queryKey: ["/api/admin/email/history"],
+    enabled: isAuthenticated && adminCheck?.isAdmin,
+    retry: false,
+  });
+
+  const { 
+    data: inboundEmails, 
+    isLoading: inboundEmailsLoading,
+  } = useQuery<InboundEmail[]>({
+    queryKey: ["/api/admin/email/inbox"],
+    enabled: isAuthenticated && adminCheck?.isAdmin,
+    retry: false,
+  });
+
+  const { 
+    data: emailUsage, 
+    isLoading: emailUsageLoading,
+  } = useQuery<EmailUsageStats>({
+    queryKey: ["/api/admin/email/usage"],
     enabled: isAuthenticated && adminCheck?.isAdmin,
     retry: false,
   });
@@ -312,12 +346,14 @@ export default function AdminPage() {
   });
 
   const sendEmailMutation = useMutation({
-    mutationFn: async (data: { to: string; toName?: string; subject: string; htmlBody: string; relatedType?: string; relatedId?: string }) => {
+    mutationFn: async (data: { to: string; toName?: string; subject: string; htmlBody: string; relatedType?: string; relatedId?: string; inReplyToEmailId?: string }) => {
       const response = await apiRequest("POST", "/api/admin/email/send", data);
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/email/history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/email/inbox"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/email/usage"] });
       toast({
         title: "Email Sent",
         description: "Your email has been sent successfully.",
@@ -327,6 +363,9 @@ export default function AdminPage() {
       setManualEmailTo("");
       setEmailSubject("");
       setEmailBody("");
+      setReplyingToInboundId(null);
+      setViewingInboundEmail(null);
+      setEmailSubTab("inbox");
     },
     onError: (error: any) => {
       toast({
@@ -1245,36 +1284,262 @@ export default function AdminPage() {
           <TabsContent value="email" data-testid="tab-content-email">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                  <div className="flex-1">
-                    <CardTitle className="flex items-center gap-2">
-                      <Mail className="w-5 h-5" />
-                      Email Communications
-                    </CardTitle>
-                    <CardDescription>
-                      Send emails to interested parties and view sent email history
-                    </CardDescription>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div className="flex-1">
+                      <CardTitle className="flex items-center gap-2">
+                        <Mail className="w-5 h-5" />
+                        Email Communications
+                      </CardTitle>
+                      <CardDescription>
+                        Send and receive emails via contact@onewonderlake.com
+                      </CardDescription>
+                    </div>
+                    <Button 
+                      onClick={() => {
+                        setEmailRecipient(null);
+                        setManualEmailTo("");
+                        setEmailSubject("");
+                        setEmailBody("");
+                        setReplyingToInboundId(null);
+                        setShowComposeEmail(true);
+                      }}
+                      disabled={emailUsage?.isShutoff}
+                      data-testid="button-compose-email"
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      Compose Email
+                    </Button>
                   </div>
-                  <Button 
-                    onClick={() => {
-                      setEmailRecipient(null);
-                      setManualEmailTo("");
-                      setEmailSubject("");
-                      setEmailBody("");
-                      setShowComposeEmail(true);
-                    }}
-                    data-testid="button-compose-email"
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    Compose Email
-                  </Button>
+                  
+                  {/* Email Usage Counter */}
+                  <div className={`p-4 rounded-lg border ${emailUsage?.isShutoff ? 'bg-destructive/10 border-destructive/30' : 'bg-muted/50'}`}>
+                    <div className="flex items-center justify-between gap-4 flex-wrap mb-2">
+                      <div className="flex items-center gap-2">
+                        {emailUsage?.isShutoff ? (
+                          <AlertTriangle className="w-5 h-5 text-destructive" />
+                        ) : (
+                          <MailCheck className="w-5 h-5 text-muted-foreground" />
+                        )}
+                        <span className="font-medium">Monthly Email Usage ({emailUsage?.month || "Loading..."})</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className={emailUsage?.isShutoff ? "text-destructive font-medium" : "text-muted-foreground"}>
+                          {emailUsage?.total || 0} / {emailUsage?.autoShutoffThreshold || 2500} emails
+                        </span>
+                        <span className="text-xs text-muted-foreground ml-2">
+                          ({emailUsage?.remaining || 0} remaining)
+                        </span>
+                      </div>
+                    </div>
+                    <Progress 
+                      value={emailUsage ? (emailUsage.total / emailUsage.autoShutoffThreshold) * 100 : 0} 
+                      className={`h-2 ${emailUsage?.isShutoff ? '[&>div]:bg-destructive' : ''}`}
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                      <span>Sent: {emailUsage?.sent || 0}</span>
+                      <span>Received: {emailUsage?.received || 0}</span>
+                    </div>
+                    {emailUsage?.isShutoff && (
+                      <p className="text-sm text-destructive mt-2">
+                        Email sending has been paused to stay within the free tier limit. Contact support to continue.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  {/* Quick Reply Section */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">Quick Reply to Submissions</h3>
+                <Tabs value={emailSubTab} onValueChange={(v) => setEmailSubTab(v as "inbox" | "sent" | "compose")}>
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="inbox" className="flex items-center gap-2" data-testid="email-subtab-inbox">
+                      <Inbox className="w-4 h-4" />
+                      Inbox
+                      {inboundEmails && inboundEmails.filter(e => !e.isRead).length > 0 && (
+                        <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1">
+                          {inboundEmails.filter(e => !e.isRead).length}
+                        </Badge>
+                      )}
+                    </TabsTrigger>
+                    <TabsTrigger value="sent" className="flex items-center gap-2" data-testid="email-subtab-sent">
+                      <Send className="w-4 h-4" />
+                      Sent
+                    </TabsTrigger>
+                    <TabsTrigger value="compose" className="flex items-center gap-2" data-testid="email-subtab-quick">
+                      <Users className="w-4 h-4" />
+                      Quick Reply
+                    </TabsTrigger>
+                  </TabsList>
+
+                  {/* Inbox Tab */}
+                  <TabsContent value="inbox">
+                    {inboundEmailsLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto mb-2"></div>
+                        <p className="text-muted-foreground">Loading inbox...</p>
+                      </div>
+                    ) : !inboundEmails || inboundEmails.length === 0 ? (
+                      <div className="text-center py-12 border rounded-lg border-dashed">
+                        <Inbox className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
+                        <p className="text-muted-foreground text-lg mb-2">No emails received yet</p>
+                        <p className="text-sm text-muted-foreground">
+                          Emails sent to contact@onewonderlake.com will appear here.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-8"></TableHead>
+                              <TableHead>From</TableHead>
+                              <TableHead>Subject</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Received</TableHead>
+                              <TableHead className="w-24">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {inboundEmails.map((email) => (
+                              <TableRow 
+                                key={email.id} 
+                                className={!email.isRead ? "bg-muted/30" : ""}
+                                data-testid={`row-inbox-${email.id}`}
+                              >
+                                <TableCell>
+                                  {!email.isRead ? (
+                                    <div className="w-2 h-2 rounded-full bg-primary" title="Unread" />
+                                  ) : (
+                                    <Eye className="w-3 h-3 text-muted-foreground" title="Read" />
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <div>
+                                    <p className={`text-sm ${!email.isRead ? "font-semibold" : ""}`}>
+                                      {email.fromName || email.fromEmail}
+                                    </p>
+                                    {email.fromName && (
+                                      <p className="text-xs text-muted-foreground">{email.fromEmail}</p>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <p className={`max-w-[200px] truncate ${!email.isRead ? "font-medium" : ""}`}>
+                                    {email.subject}
+                                  </p>
+                                </TableCell>
+                                <TableCell>
+                                  {email.isReplied ? (
+                                    <Badge variant="secondary" className="flex items-center gap-1 w-fit">
+                                      <Reply className="w-3 h-3" />
+                                      Replied
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline">Pending</Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <span className="text-sm text-muted-foreground">
+                                    {email.receivedAt ? format(new Date(email.receivedAt), "MMM d, h:mm a") : "-"}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1">
+                                    <Button 
+                                      size="icon" 
+                                      variant="ghost"
+                                      onClick={() => setViewingInboundEmail(email)}
+                                      title="View Email"
+                                      data-testid={`button-view-email-${email.id}`}
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </Button>
+                                    <Button 
+                                      size="icon" 
+                                      variant="ghost"
+                                      disabled={emailUsage?.isShutoff}
+                                      onClick={() => {
+                                        setEmailRecipient({ 
+                                          email: email.fromEmail, 
+                                          name: email.fromName || email.fromEmail, 
+                                          type: "inbound_reply", 
+                                          id: email.id 
+                                        });
+                                        setReplyingToInboundId(email.id);
+                                        setEmailSubject(`Re: ${email.subject}`);
+                                        setEmailBody(`<p>Thank you for your email.</p><p></p><p>Best regards,<br/>One Wonder Lake Team</p><hr/><p><em>On ${format(new Date(email.receivedAt), "MMM d, yyyy")} ${email.fromName || email.fromEmail} wrote:</em></p><blockquote style="border-left: 2px solid #ccc; padding-left: 10px; margin-left: 10px; color: #666;">${email.textBody || email.subject}</blockquote>`);
+                                        setShowComposeEmail(true);
+                                      }}
+                                      title="Reply"
+                                      data-testid={`button-reply-email-${email.id}`}
+                                    >
+                                      <Reply className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  {/* Sent Tab */}
+                  <TabsContent value="sent">
+                    {emailHistoryLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto mb-2"></div>
+                        <p className="text-muted-foreground">Loading sent emails...</p>
+                      </div>
+                    ) : !emailHistory || emailHistory.length === 0 ? (
+                      <div className="text-center py-12 border rounded-lg border-dashed">
+                        <Send className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
+                        <p className="text-muted-foreground text-lg mb-2">No emails sent yet</p>
+                        <p className="text-sm text-muted-foreground">
+                          Compose and send emails to interested parties and question submitters.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Recipient</TableHead>
+                              <TableHead>Subject</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Sent</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {emailHistory.map((email) => (
+                              <TableRow key={email.id} data-testid={`row-sent-${email.id}`}>
+                                <TableCell>
+                                  <div>
+                                    <p className="font-medium">{email.recipientName || "Unknown"}</p>
+                                    <p className="text-xs text-muted-foreground">{email.recipientEmail}</p>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="max-w-[200px] truncate">{email.subject}</TableCell>
+                                <TableCell>
+                                  <Badge variant={email.status === "sent" ? "default" : email.status === "delivered" ? "secondary" : "destructive"}>
+                                    {email.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <span className="text-sm text-muted-foreground">
+                                    {email.createdAt ? format(new Date(email.createdAt), "MMM d, yyyy h:mm a") : "-"}
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  {/* Quick Reply Tab */}
+                  <TabsContent value="compose">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Interested Parties who can receive emails */}
                       <Card className="border-dashed">
@@ -1290,10 +1555,12 @@ export default function AdminPage() {
                               key={party.id} 
                               className="flex items-center justify-between p-2 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
                               onClick={() => {
-                                setEmailRecipient({ email: party.email, name: party.name, type: "interested_party", id: party.id });
-                                setEmailSubject("Re: Your Interest in Wonder Lake Annexation");
-                                setEmailBody(`<p>Dear ${party.name},</p><p>Thank you for expressing your interest in the Wonder Lake annexation initiative.</p><p>Best regards,<br/>One Wonder Lake Team</p>`);
-                                setShowComposeEmail(true);
+                                if (!emailUsage?.isShutoff) {
+                                  setEmailRecipient({ email: party.email, name: party.name, type: "interested_party", id: party.id });
+                                  setEmailSubject("Re: Your Interest in Wonder Lake Annexation");
+                                  setEmailBody(`<p>Dear ${party.name},</p><p>Thank you for expressing your interest in the Wonder Lake annexation initiative.</p><p>Best regards,<br/>One Wonder Lake Team</p>`);
+                                  setShowComposeEmail(true);
+                                }
                               }}
                               data-testid={`quick-reply-party-${party.id}`}
                             >
@@ -1301,7 +1568,7 @@ export default function AdminPage() {
                                 <p className="text-sm font-medium">{party.name}</p>
                                 <p className="text-xs text-muted-foreground">{party.email}</p>
                               </div>
-                              <Button size="icon" variant="ghost">
+                              <Button size="icon" variant="ghost" disabled={emailUsage?.isShutoff}>
                                 <Send className="w-4 h-4" />
                               </Button>
                             </div>
@@ -1326,10 +1593,12 @@ export default function AdminPage() {
                               key={question.id} 
                               className="flex items-center justify-between p-2 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
                               onClick={() => {
-                                setEmailRecipient({ email: question.email, name: question.name, type: "community_question", id: question.id });
-                                setEmailSubject("Re: Your Question about Wonder Lake Annexation");
-                                setEmailBody(`<p>Dear ${question.name},</p><p>Thank you for your question about the Wonder Lake annexation initiative.</p><p>Your question: "${question.question}"</p><p>Best regards,<br/>One Wonder Lake Team</p>`);
-                                setShowComposeEmail(true);
+                                if (!emailUsage?.isShutoff) {
+                                  setEmailRecipient({ email: question.email, name: question.name, type: "community_question", id: question.id });
+                                  setEmailSubject("Re: Your Question about Wonder Lake Annexation");
+                                  setEmailBody(`<p>Dear ${question.name},</p><p>Thank you for your question about the Wonder Lake annexation initiative.</p><p>Your question: "${question.question}"</p><p>Best regards,<br/>One Wonder Lake Team</p>`);
+                                  setShowComposeEmail(true);
+                                }
                               }}
                               data-testid={`quick-reply-question-${question.id}`}
                             >
@@ -1337,7 +1606,7 @@ export default function AdminPage() {
                                 <p className="text-sm font-medium">{question.name}</p>
                                 <p className="text-xs text-muted-foreground line-clamp-1">{question.question}</p>
                               </div>
-                              <Button size="icon" variant="ghost">
+                              <Button size="icon" variant="ghost" disabled={emailUsage?.isShutoff}>
                                 <Send className="w-4 h-4" />
                               </Button>
                             </div>
@@ -1348,63 +1617,8 @@ export default function AdminPage() {
                         </CardContent>
                       </Card>
                     </div>
-                  </div>
-
-                  {/* Email History */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">Sent Email History</h3>
-                    {emailHistoryLoading ? (
-                      <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto mb-2"></div>
-                        <p className="text-muted-foreground">Loading email history...</p>
-                      </div>
-                    ) : !emailHistory || emailHistory.length === 0 ? (
-                      <div className="text-center py-12 border rounded-lg border-dashed">
-                        <Mail className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
-                        <p className="text-muted-foreground text-lg mb-2">No emails sent yet</p>
-                        <p className="text-sm text-muted-foreground">
-                          Compose and send emails to interested parties and question submitters.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Recipient</TableHead>
-                              <TableHead>Subject</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Sent</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {emailHistory.map((email) => (
-                              <TableRow key={email.id} data-testid={`row-email-${email.id}`}>
-                                <TableCell>
-                                  <div>
-                                    <p className="font-medium">{email.recipientName || "Unknown"}</p>
-                                    <p className="text-xs text-muted-foreground">{email.recipientEmail}</p>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="max-w-[200px] truncate">{email.subject}</TableCell>
-                                <TableCell>
-                                  <Badge variant={email.status === "sent" ? "default" : email.status === "delivered" ? "secondary" : "destructive"}>
-                                    {email.status}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  <span className="text-sm text-muted-foreground">
-                                    {email.createdAt ? format(new Date(email.createdAt), "MMM d, yyyy h:mm a") : "-"}
-                                  </span>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           </TabsContent>
@@ -1772,6 +1986,7 @@ export default function AdminPage() {
                       htmlBody: emailBody,
                       relatedType: emailRecipient?.type || undefined,
                       relatedId: emailRecipient?.id || undefined,
+                      inReplyToEmailId: replyingToInboundId || undefined,
                     });
                   }
                 }}
@@ -1794,6 +2009,101 @@ export default function AdminPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Inbound Email Dialog */}
+      <Dialog open={!!viewingInboundEmail} onOpenChange={(open) => !open && setViewingInboundEmail(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" data-testid="dialog-view-email">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="w-5 h-5" />
+              Email Details
+            </DialogTitle>
+          </DialogHeader>
+
+          {viewingInboundEmail && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">From</p>
+                  <p className="font-medium">{viewingInboundEmail.fromName || viewingInboundEmail.fromEmail}</p>
+                  {viewingInboundEmail.fromName && (
+                    <p className="text-sm text-muted-foreground">{viewingInboundEmail.fromEmail}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Received</p>
+                  <p className="font-medium">
+                    {viewingInboundEmail.receivedAt ? format(new Date(viewingInboundEmail.receivedAt), "MMM d, yyyy h:mm a") : "-"}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm text-muted-foreground">Subject</p>
+                <p className="font-medium">{viewingInboundEmail.subject}</p>
+              </div>
+
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">Message</p>
+                <div className="p-4 bg-muted rounded-lg">
+                  {viewingInboundEmail.htmlBody ? (
+                    <div 
+                      className="prose prose-sm max-w-none dark:prose-invert" 
+                      dangerouslySetInnerHTML={{ __html: viewingInboundEmail.htmlBody }}
+                    />
+                  ) : viewingInboundEmail.textBody ? (
+                    <pre className="whitespace-pre-wrap text-sm font-sans">{viewingInboundEmail.textBody}</pre>
+                  ) : (
+                    <p className="text-muted-foreground italic">No message content available</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-4 border-t">
+                <div className="flex items-center gap-2">
+                  {viewingInboundEmail.isReplied ? (
+                    <Badge variant="secondary" className="flex items-center gap-1">
+                      <Reply className="w-3 h-3" />
+                      Replied
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline">Awaiting Reply</Badge>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setViewingInboundEmail(null)}
+                    data-testid="button-close-view-email"
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    disabled={emailUsage?.isShutoff}
+                    onClick={() => {
+                      setEmailRecipient({ 
+                        email: viewingInboundEmail.fromEmail, 
+                        name: viewingInboundEmail.fromName || viewingInboundEmail.fromEmail, 
+                        type: "inbound_reply", 
+                        id: viewingInboundEmail.id 
+                      });
+                      setReplyingToInboundId(viewingInboundEmail.id);
+                      setEmailSubject(`Re: ${viewingInboundEmail.subject}`);
+                      setEmailBody(`<p>Thank you for your email.</p><p></p><p>Best regards,<br/>One Wonder Lake Team</p><hr/><p><em>On ${format(new Date(viewingInboundEmail.receivedAt), "MMM d, yyyy")} ${viewingInboundEmail.fromName || viewingInboundEmail.fromEmail} wrote:</em></p><blockquote style="border-left: 2px solid #ccc; padding-left: 10px; margin-left: 10px; color: #666;">${viewingInboundEmail.textBody || viewingInboundEmail.subject}</blockquote>`);
+                      setViewingInboundEmail(null);
+                      setShowComposeEmail(true);
+                    }}
+                    data-testid="button-reply-from-view"
+                  >
+                    <Reply className="w-4 h-4 mr-2" />
+                    Reply
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
