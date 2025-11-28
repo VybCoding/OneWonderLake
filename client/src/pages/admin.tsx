@@ -60,7 +60,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { InterestedParty, SearchedAddress, CommunityQuestion, DynamicFaq } from "@shared/schema";
+import type { InterestedParty, SearchedAddress, CommunityQuestion, DynamicFaq, EmailCorrespondence } from "@shared/schema";
 import AdminMap from "@/components/AdminMap";
 
 interface MapPin {
@@ -115,6 +115,12 @@ export default function AdminPage() {
   const [newFaqQuestion, setNewFaqQuestion] = useState("");
   const [newFaqAnswer, setNewFaqAnswer] = useState("");
   const [newFaqCategory, setNewFaqCategory] = useState("general");
+  
+  // Email compose state
+  const [showComposeEmail, setShowComposeEmail] = useState(false);
+  const [emailRecipient, setEmailRecipient] = useState<{ email: string; name: string; type: string; id: string } | null>(null);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -177,6 +183,15 @@ export default function AdminPage() {
     isLoading: mapLoading,
   } = useQuery<MapData>({
     queryKey: ["/api/admin/map-data"],
+    enabled: isAuthenticated && adminCheck?.isAdmin,
+    retry: false,
+  });
+
+  const { 
+    data: emailHistory, 
+    isLoading: emailHistoryLoading,
+  } = useQuery<EmailCorrespondence[]>({
+    queryKey: ["/api/admin/email/history"],
     enabled: isAuthenticated && adminCheck?.isAdmin,
     retry: false,
   });
@@ -290,6 +305,31 @@ export default function AdminPage() {
       toast({
         title: "Error",
         description: "Failed to delete the question. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const sendEmailMutation = useMutation({
+    mutationFn: async (data: { to: string; toName?: string; subject: string; htmlBody: string; relatedType?: string; relatedId?: string }) => {
+      const response = await apiRequest("POST", "/api/admin/email/send", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/email/history"] });
+      toast({
+        title: "Email Sent",
+        description: "Your email has been sent successfully.",
+      });
+      setShowComposeEmail(false);
+      setEmailRecipient(null);
+      setEmailSubject("");
+      setEmailBody("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to send email. Please try again.",
         variant: "destructive",
       });
     },
@@ -624,6 +664,10 @@ export default function AdminPage() {
             <TabsTrigger value="map" className="flex items-center gap-2" data-testid="tab-map">
               <Map className="w-4 h-4" />
               Map
+            </TabsTrigger>
+            <TabsTrigger value="email" className="flex items-center gap-2" data-testid="tab-email">
+              <Mail className="w-4 h-4" />
+              Email ({emailHistory?.length || 0})
             </TabsTrigger>
           </TabsList>
 
@@ -1195,6 +1239,172 @@ export default function AdminPage() {
               isLoading={mapLoading} 
             />
           </TabsContent>
+
+          <TabsContent value="email" data-testid="tab-content-email">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex-1">
+                    <CardTitle className="flex items-center gap-2">
+                      <Mail className="w-5 h-5" />
+                      Email Communications
+                    </CardTitle>
+                    <CardDescription>
+                      Send emails to interested parties and view sent email history
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    onClick={() => {
+                      setEmailRecipient(null);
+                      setEmailSubject("");
+                      setEmailBody("");
+                      setShowComposeEmail(true);
+                    }}
+                    data-testid="button-compose-email"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Compose Email
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {/* Quick Reply Section */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Quick Reply to Submissions</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Interested Parties who can receive emails */}
+                      <Card className="border-dashed">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <Users className="w-4 h-4" />
+                            Recent Interested Parties
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          {interestedParties?.filter(p => p.contactConsent && !p.unsubscribed).slice(0, 5).map((party) => (
+                            <div 
+                              key={party.id} 
+                              className="flex items-center justify-between p-2 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
+                              onClick={() => {
+                                setEmailRecipient({ email: party.email, name: party.name, type: "interested_party", id: party.id });
+                                setEmailSubject("Re: Your Interest in Wonder Lake Annexation");
+                                setEmailBody(`<p>Dear ${party.name},</p><p>Thank you for expressing your interest in the Wonder Lake annexation initiative.</p><p>Best regards,<br/>One Wonder Lake Team</p>`);
+                                setShowComposeEmail(true);
+                              }}
+                              data-testid={`quick-reply-party-${party.id}`}
+                            >
+                              <div>
+                                <p className="text-sm font-medium">{party.name}</p>
+                                <p className="text-xs text-muted-foreground">{party.email}</p>
+                              </div>
+                              <Button size="icon" variant="ghost">
+                                <Send className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                          {(!interestedParties || interestedParties.filter(p => p.contactConsent && !p.unsubscribed).length === 0) && (
+                            <p className="text-sm text-muted-foreground text-center py-4">No contactable parties yet</p>
+                          )}
+                        </CardContent>
+                      </Card>
+
+                      {/* Community Questions that can receive emails */}
+                      <Card className="border-dashed">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <MessageCircleQuestion className="w-4 h-4" />
+                            Recent Question Submitters
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          {communityQuestions?.filter(q => q.contactConsent && !q.unsubscribed).slice(0, 5).map((question) => (
+                            <div 
+                              key={question.id} 
+                              className="flex items-center justify-between p-2 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
+                              onClick={() => {
+                                setEmailRecipient({ email: question.email, name: question.name, type: "community_question", id: question.id });
+                                setEmailSubject("Re: Your Question about Wonder Lake Annexation");
+                                setEmailBody(`<p>Dear ${question.name},</p><p>Thank you for your question about the Wonder Lake annexation initiative.</p><p>Your question: "${question.question}"</p><p>Best regards,<br/>One Wonder Lake Team</p>`);
+                                setShowComposeEmail(true);
+                              }}
+                              data-testid={`quick-reply-question-${question.id}`}
+                            >
+                              <div>
+                                <p className="text-sm font-medium">{question.name}</p>
+                                <p className="text-xs text-muted-foreground line-clamp-1">{question.question}</p>
+                              </div>
+                              <Button size="icon" variant="ghost">
+                                <Send className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                          {(!communityQuestions || communityQuestions.filter(q => q.contactConsent && !q.unsubscribed).length === 0) && (
+                            <p className="text-sm text-muted-foreground text-center py-4">No contactable question submitters yet</p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+
+                  {/* Email History */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Sent Email History</h3>
+                    {emailHistoryLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto mb-2"></div>
+                        <p className="text-muted-foreground">Loading email history...</p>
+                      </div>
+                    ) : !emailHistory || emailHistory.length === 0 ? (
+                      <div className="text-center py-12 border rounded-lg border-dashed">
+                        <Mail className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
+                        <p className="text-muted-foreground text-lg mb-2">No emails sent yet</p>
+                        <p className="text-sm text-muted-foreground">
+                          Compose and send emails to interested parties and question submitters.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Recipient</TableHead>
+                              <TableHead>Subject</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Sent</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {emailHistory.map((email) => (
+                              <TableRow key={email.id} data-testid={`row-email-${email.id}`}>
+                                <TableCell>
+                                  <div>
+                                    <p className="font-medium">{email.recipientName || "Unknown"}</p>
+                                    <p className="text-xs text-muted-foreground">{email.recipientEmail}</p>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="max-w-[200px] truncate">{email.subject}</TableCell>
+                                <TableCell>
+                                  <Badge variant={email.status === "sent" ? "default" : email.status === "delivered" ? "secondary" : "destructive"}>
+                                    {email.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <span className="text-sm text-muted-foreground">
+                                    {email.createdAt ? format(new Date(email.createdAt), "MMM d, yyyy h:mm a") : "-"}
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
 
         <div className="mt-8 text-center">
@@ -1462,6 +1672,117 @@ export default function AdminPage() {
                 data-testid="button-create-faq"
               >
                 {createFaqMutation.isPending ? "Creating..." : "Create FAQ"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Compose Email Dialog */}
+      <Dialog open={showComposeEmail} onOpenChange={setShowComposeEmail}>
+        <DialogContent className="max-w-2xl" data-testid="dialog-compose-email">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="w-5 h-5" />
+              Compose Email
+            </DialogTitle>
+            <DialogDescription>
+              Send an email to a resident. HTML formatting is supported.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">To</label>
+              {emailRecipient ? (
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
+                  <div>
+                    <p className="font-medium">{emailRecipient.name}</p>
+                    <p className="text-sm text-muted-foreground">{emailRecipient.email}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEmailRecipient(null)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Input
+                  placeholder="Enter recipient email..."
+                  onChange={(e) => setEmailRecipient({ email: e.target.value, name: "", type: "", id: "" })}
+                  data-testid="input-email-to"
+                />
+              )}
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Subject</label>
+              <Input
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                placeholder="Enter email subject..."
+                data-testid="input-email-subject"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Message (HTML supported)</label>
+              <Textarea
+                value={emailBody}
+                onChange={(e) => setEmailBody(e.target.value)}
+                placeholder="<p>Your message here...</p>"
+                className="min-h-[200px] font-mono text-sm"
+                data-testid="textarea-email-body"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Use HTML tags like &lt;p&gt;, &lt;br&gt;, &lt;strong&gt;, etc. for formatting.
+              </p>
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowComposeEmail(false);
+                  setEmailRecipient(null);
+                  setEmailSubject("");
+                  setEmailBody("");
+                }}
+                data-testid="button-cancel-email"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (emailRecipient?.email && emailSubject.trim() && emailBody.trim()) {
+                    sendEmailMutation.mutate({
+                      to: emailRecipient.email,
+                      toName: emailRecipient.name || undefined,
+                      subject: emailSubject,
+                      htmlBody: emailBody,
+                      relatedType: emailRecipient.type || undefined,
+                      relatedId: emailRecipient.id || undefined,
+                    });
+                  }
+                }}
+                disabled={
+                  !emailRecipient?.email || 
+                  !emailSubject.trim() || 
+                  !emailBody.trim() || 
+                  sendEmailMutation.isPending
+                }
+                data-testid="button-send-email"
+              >
+                {sendEmailMutation.isPending ? (
+                  <>Sending...</>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Send Email
+                  </>
+                )}
               </Button>
             </div>
           </div>
