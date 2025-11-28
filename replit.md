@@ -47,13 +47,23 @@ Combines static and dynamic content with search, category filters, and "New" / "
 #### Admin Questions Management
 New admin tabs for managing community questions: "Questions" to view, answer, and publish submitted questions, and "Published FAQs" to manage dynamic FAQs, including adding new ones and tracking view counts.
 
-#### Admin Email Communications
-An email tab in the admin dashboard allowing campaign organizers to send emails to interested parties and question submitters. Features include:
+#### Admin Email Communications (Bidirectional)
+A comprehensive email tab in the admin dashboard with full bidirectional email capabilities:
+- **Inbox**: View received emails sent to contact@onewonderlake.com with read/unread status and reply functionality
+- **Sent**: Track all outgoing emails with recipient, subject, status, and timestamp
 - **Quick Reply**: Click-to-compose email responses to recent form submissions (interested parties and community questions)
 - **Compose Email**: Full email composition with HTML support for formatted messages
-- **Email History**: Track all sent emails with recipient, subject, status, and timestamp
+- **Reply to Inbound**: Reply directly to emails received in the inbox, with original message quoted
 - **Resend Integration**: Uses Resend API for reliable email delivery from contact@onewonderlake.com
+- **Usage Tracking**: Monthly email counter (sent + received) with visual progress bar
+- **Auto-Shutoff**: Email sending pauses at 2,500/month to stay within free tier (3,000 limit)
+- **Webhook Security**: Svix signature verification protects the inbound webhook endpoint
 The system only sends emails to users who have given contact consent and have not unsubscribed.
+
+**Webhook Configuration Required**: To receive inbound emails, configure a webhook in Resend dashboard:
+- URL: `https://{your-domain}/api/webhooks/resend`
+- Event: `email.received`
+- Copy the webhook secret and add as `RESEND_WEBHOOK_SECRET` environment variable
 
 #### Campaign Arguments (Mission Pillars)
 Six clickable pillars on the homepage provide in-depth content on key annexation benefits, such as "Bring State Tax Dollars Home" and "Improve Safety & Services".
@@ -82,6 +92,8 @@ Full-stack JavaScript setup:
 - `community_questions`: Stores submitted questions, submitter info, category, status, answer, and consent data.
 - `dynamic_faqs`: Stores FAQ content, category, view count, and creation metadata.
 - `email_correspondence`: Tracks all sent emails including recipient, subject, body, status, Resend message ID, and relationships to interested parties or community questions.
+- `inbound_emails`: Stores received emails from contact@onewonderlake.com including sender info, subject, body, read/replied status, and reply associations.
+- `email_usage`: Tracks monthly email counts (sent + received) for usage monitoring and auto-shutoff enforcement.
 
 ## External Dependencies
 - **Mapping**: OpenStreetMap (tiles for Leaflet)

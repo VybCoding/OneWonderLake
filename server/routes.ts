@@ -4,6 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 import { execSync } from "child_process";
 import { join } from "path";
 import { randomBytes } from "crypto";
+import { Webhook } from "svix";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { sendEmail, getEmailContent, getEmailLimits } from "./resend";
@@ -1044,7 +1045,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Resend webhook endpoint for receiving inbound emails
   app.post("/api/webhooks/resend", async (req: Request, res: Response) => {
     try {
-      const event = req.body;
+      // Verify webhook signature if secret is configured
+      const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+      let event = req.body;
+      
+      if (webhookSecret) {
+        const svixId = req.headers['svix-id'] as string;
+        const svixTimestamp = req.headers['svix-timestamp'] as string;
+        const svixSignature = req.headers['svix-signature'] as string;
+        
+        if (!svixId || !svixTimestamp || !svixSignature) {
+          console.error("[RESEND WEBHOOK] Missing Svix headers");
+          return res.status(401).json({ error: "Missing webhook signature headers" });
+        }
+        
+        try {
+          const wh = new Webhook(webhookSecret);
+          // Note: req.body is already parsed, so we need to stringify it
+          // For production, consider using express.raw() middleware for this route
+          const payload = JSON.stringify(req.body);
+          event = wh.verify(payload, {
+            'svix-id': svixId,
+            'svix-timestamp': svixTimestamp,
+            'svix-signature': svixSignature,
+          }) as any;
+        } catch (verifyError) {
+          console.error("[RESEND WEBHOOK] Signature verification failed:", verifyError);
+          return res.status(401).json({ error: "Invalid webhook signature" });
+        }
+      } else {
+        console.warn("[RESEND WEBHOOK] No webhook secret configured - accepting unverified request");
+      }
       
       console.log("[RESEND WEBHOOK] Received event:", event.type);
       
