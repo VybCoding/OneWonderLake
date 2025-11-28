@@ -49,7 +49,7 @@ export default function Navbar({ onNavClick }: NavbarProps) {
   return (
     <nav className="sticky top-0 z-[1000] bg-primary text-primary-foreground shadow-md">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <div className="flex items-center justify-between min-h-24">
+        <div className="flex items-center justify-between py-0">
           {/* Logo */}
           <div className="flex-shrink-0">
             <a 

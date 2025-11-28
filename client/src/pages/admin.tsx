@@ -528,7 +528,7 @@ export default function AdminPage() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-primary text-primary-foreground shadow-md">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex items-center justify-between min-h-24">
+          <div className="flex items-center justify-between py-0">
             <div className="flex items-center gap-4">
               <Link href="/" className="hover:opacity-80 transition-opacity flex items-center">
                 <img 
