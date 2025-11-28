@@ -1297,14 +1297,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
 
-          // Send email
-          const result = await resend.emails.send({
-            from: "One Wonder Lake <contact@onewonderlake.com>",
-            to: contact.email,
-            subject: subject,
-            html: htmlBody,
-            text: textBody || undefined,
-          });
+          // Send email using the Resend client
+          const result = await sendEmail(contact.email, subject, htmlBody, textBody);
 
           if (result.error) {
             errors.push(`Failed to send to ${contact.email}: ${result.error.message}`);
@@ -1413,17 +1407,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Log the full data structure for debugging
         console.log("[RESEND WEBHOOK] Full email data keys:", Object.keys(data));
+        console.log("[RESEND WEBHOOK] Email body structure:", {
+          hasBody: !!data.body,
+          bodyType: typeof data.body,
+          bodyKeys: data.body ? Object.keys(data.body) : [],
+          hasText: !!data.text,
+          hasHtml: !!data.html,
+        });
         
-        // Store the inbound email with full content from Resend
-        // Resend webhook sends: text (plain text body), html (HTML body)
+        // Parse email body - Resend can send body in different formats:
+        // 1. Nested: { body: { text: "...", html: "..." } }
+        // 2. Flat: { text: "...", html: "..." }
+        let textBody = null;
+        let htmlBody = null;
+        
+        if (data.body && typeof data.body === 'object') {
+          // Nested format: body.text and body.html
+          textBody = data.body.text || null;
+          htmlBody = data.body.html || null;
+        } else {
+          // Flat format or string body
+          textBody = data.text || (typeof data.body === 'string' ? data.body : null);
+          htmlBody = data.html || null;
+        }
+        
+        // Store the inbound email with parsed content
         const inboundEmail = await storage.createInboundEmail({
           resendEmailId: data.email_id,
           fromEmail: fromEmail,
           fromName: fromName,
           toEmail: Array.isArray(data.to) ? data.to[0] : data.to,
           subject: data.subject || "(No Subject)",
-          textBody: data.text || data.body || null, // Resend uses 'text' for plain text content
-          htmlBody: data.html || null, // Resend uses 'html' for HTML content
+          textBody: textBody,
+          htmlBody: htmlBody,
           messageId: data.message_id || null,
           inReplyTo: data.in_reply_to || null,
           isRead: false,
@@ -1433,7 +1449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           receivedAt: new Date(data.created_at || Date.now()),
         });
         
-        console.log("[RESEND WEBHOOK] Email content stored - text:", !!data.text, "html:", !!data.html);
+        console.log("[RESEND WEBHOOK] Email content stored - textBody:", !!textBody, "htmlBody:", !!htmlBody);
 
         // Increment received count
         await storage.incrementReceivedCount(currentMonth);
