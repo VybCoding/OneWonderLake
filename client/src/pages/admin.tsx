@@ -64,6 +64,7 @@ import type { InterestedParty, SearchedAddress, CommunityQuestion, DynamicFaq, E
 import AdminMap from "@/components/AdminMap";
 import { Inbox, AlertTriangle, Reply, Eye, EyeOff, MailCheck } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import logoImage from "@assets/one wonder lake_1764293595280.png";
 
 interface EmailUsageStats {
   month: string;
@@ -529,8 +530,12 @@ export default function AdminPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
-              <Link href="/" className="text-xl font-bold hover:opacity-80 transition-opacity">
-                One Wonder Lake
+              <Link href="/" className="hover:opacity-80 transition-opacity flex items-center">
+                <img 
+                  src={logoImage} 
+                  alt="One Wonder Lake - Promoting Unity" 
+                  className="h-10 md:h-12 w-auto"
+                />
               </Link>
               <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground">
                 Admin

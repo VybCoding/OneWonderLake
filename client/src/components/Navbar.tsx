@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation, Link } from "wouter";
+import logoImage from "@assets/one wonder lake_1764293595280.png";
 
 interface NavbarProps {
   onNavClick?: (section: string) => void;
@@ -54,10 +55,14 @@ export default function Navbar({ onNavClick }: NavbarProps) {
             <a 
               href="/" 
               onClick={handleHomeClick}
-              className="text-xl font-bold hover:opacity-80 transition-opacity cursor-pointer" 
-              data-testid="text-logo"
+              className="hover:opacity-80 transition-opacity cursor-pointer flex items-center" 
+              data-testid="link-logo"
             >
-              One Wonder Lake
+              <img 
+                src={logoImage} 
+                alt="One Wonder Lake - Promoting Unity" 
+                className="h-10 md:h-12 w-auto"
+              />
             </a>
           </div>
 
