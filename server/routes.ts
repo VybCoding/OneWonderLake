@@ -1390,10 +1390,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (event.type === "email.received") {
         const data = event.data;
         
-        // Log all keys at every level to find where the body content is
-        console.log("[RESEND WEBHOOK] Top-level event keys:", Object.keys(event));
-        console.log("[RESEND WEBHOOK] Data keys:", Object.keys(data));
-        
         // Check if we already processed this email
         const existing = await storage.getInboundEmailByResendId(data.email_id);
         if (existing) {
@@ -1416,44 +1412,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fromName = fromMatch[1]?.trim() || null;
         const fromEmail = fromMatch[2]?.trim() || data.from;
 
-        // Log ALL possible body field locations for debugging
-        console.log("[RESEND WEBHOOK] Body field analysis:", {
-          // Direct fields
-          "data.text": data.text?.substring?.(0, 100) || data.text,
-          "data.html": data.html?.substring?.(0, 100) || data.html,
-          "data.body": typeof data.body === 'string' ? data.body.substring(0, 100) : data.body,
-          // Nested in body object
-          "data.body?.text": data.body?.text?.substring?.(0, 100),
-          "data.body?.html": data.body?.html?.substring?.(0, 100),
-          // Other possible locations
-          "data.content": data.content,
-          "data.message": data.message,
-          "data.plain_body": data.plain_body,
-          "data.html_body": data.html_body,
-        });
+        // IMPORTANT: Resend webhook does NOT include email body content!
+        // We must fetch it separately via the Resend API
+        let textBody: string | null = null;
+        let htmlBody: string | null = null;
         
-        // Parse email body - try ALL possible locations where Resend might put body content
-        let textBody = null;
-        let htmlBody = null;
-        
-        // Try nested body object first
-        if (data.body && typeof data.body === 'object') {
-          textBody = data.body.text || data.body.plain || null;
-          htmlBody = data.body.html || null;
+        const resendApiKey = process.env.RESEND_API_KEY;
+        if (resendApiKey && data.email_id) {
+          try {
+            console.log("[RESEND WEBHOOK] Fetching email content from Resend API for:", data.email_id);
+            const emailContentResponse = await fetch(
+              `https://api.resend.com/emails/${data.email_id}`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${resendApiKey}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+            
+            if (emailContentResponse.ok) {
+              const emailContent = await emailContentResponse.json();
+              console.log("[RESEND WEBHOOK] Email content fetched, keys:", Object.keys(emailContent));
+              textBody = emailContent.text || null;
+              htmlBody = emailContent.html || null;
+              console.log("[RESEND WEBHOOK] Body content - text:", !!textBody, "html:", !!htmlBody);
+            } else {
+              console.error("[RESEND WEBHOOK] Failed to fetch email content:", emailContentResponse.status, await emailContentResponse.text());
+            }
+          } catch (fetchError) {
+            console.error("[RESEND WEBHOOK] Error fetching email content:", fetchError);
+          }
+        } else {
+          console.warn("[RESEND WEBHOOK] No RESEND_API_KEY configured, cannot fetch email body");
         }
         
-        // Fall back to flat fields
-        if (!textBody) {
-          textBody = data.text || data.plain_body || data.plain || 
-                     (typeof data.body === 'string' ? data.body : null) ||
-                     data.content?.text || null;
-        }
-        if (!htmlBody) {
-          htmlBody = data.html || data.html_body || 
-                     data.content?.html || null;
-        }
-        
-        // Store the inbound email with parsed content AND raw payload for debugging
+        // Store the inbound email with fetched content
         const inboundEmail = await storage.createInboundEmail({
           resendEmailId: data.email_id,
           fromEmail: fromEmail,
@@ -1468,11 +1462,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isReplied: false,
           replyEmailId: null,
           attachments: data.attachments || null,
-          rawPayload: event, // Store the full raw webhook payload for debugging
+          rawPayload: event, // Store the raw webhook payload for reference
           receivedAt: new Date(data.created_at || Date.now()),
         });
         
-        console.log("[RESEND WEBHOOK] Email content stored - textBody:", !!textBody, "htmlBody:", !!htmlBody);
+        console.log("[RESEND WEBHOOK] Email stored with content - textBody:", !!textBody, "htmlBody:", !!htmlBody);
 
         // Increment received count
         await storage.incrementReceivedCount(currentMonth);
