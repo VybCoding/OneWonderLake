@@ -527,14 +527,14 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-primary text-primary-foreground shadow-md">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex items-center justify-between py-0">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="hover:opacity-80 transition-opacity flex items-center">
+        <div className="max-w-7xl mx-auto px-4 lg:px-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 py-1">
+              <Link href="/" className="hover:opacity-80 transition-opacity block">
                 <img 
                   src={logoImage} 
                   alt="One Wonder Lake - Promoting Unity" 
-                  className="h-32 md:h-48 w-auto"
+                  className="h-20 md:h-28 w-auto block"
                 />
               </Link>
               <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground">

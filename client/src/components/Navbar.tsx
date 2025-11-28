@@ -48,20 +48,20 @@ export default function Navbar({ onNavClick }: NavbarProps) {
 
   return (
     <nav className="sticky top-0 z-[1000] bg-primary text-primary-foreground shadow-md">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <div className="flex items-center justify-between py-0">
+      <div className="max-w-7xl mx-auto px-4 lg:px-6">
+        <div className="flex items-center justify-between">
           {/* Logo */}
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 py-1">
             <a 
               href="/" 
               onClick={handleHomeClick}
-              className="hover:opacity-80 transition-opacity cursor-pointer flex items-center" 
+              className="hover:opacity-80 transition-opacity cursor-pointer block" 
               data-testid="link-logo"
             >
               <img 
                 src={logoImage} 
                 alt="One Wonder Lake - Promoting Unity" 
-                className="h-32 md:h-48 w-auto"
+                className="h-20 md:h-28 w-auto block"
               />
             </a>
           </div>
