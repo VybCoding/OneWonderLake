@@ -713,7 +713,12 @@ export default function AdminPage() {
             </TabsTrigger>
             <TabsTrigger value="email" className="flex items-center gap-2" data-testid="tab-email">
               <Mail className="w-4 h-4" />
-              Email ({emailHistory?.length || 0})
+              Email
+              {inboundEmails && inboundEmails.filter(e => !e.isRead).length > 0 && (
+                <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1 flex items-center justify-center text-xs">
+                  {inboundEmails.filter(e => !e.isRead).length}
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 
