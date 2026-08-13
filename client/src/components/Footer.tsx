@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Shield } from "lucide-react";
+import { Mail, Shield } from "lucide-react";
 import type { BuildInfo } from "@shared/schema";
 
 export default function Footer() {
@@ -21,15 +21,29 @@ export default function Footer() {
           <p className="text-sm" data-testid="text-footer">
             Paid for by concerned citizens.
           </p>
+          <p className="text-sm mt-2 opacity-90">
+            <a
+              href="mailto:contact@onewonderlake.com"
+              className="inline-flex items-center gap-2 underline underline-offset-4 hover:opacity-100"
+              data-testid="link-contact-email"
+            >
+              <Mail className="w-4 h-4" />
+              contact@onewonderlake.com
+            </a>
+          </p>
         </div>
-        
+
         <div className="mt-6 pt-6 border-t border-primary-foreground/20">
           <div className="flex items-center justify-center gap-2 mb-3">
             <Shield className="w-4 h-4 opacity-80" />
             <span className="text-sm font-medium opacity-90">Privacy Commitment</span>
           </div>
           <p className="text-xs text-center opacity-75 max-w-2xl mx-auto" data-testid="text-privacy-notice">
-            Your information will not be sold or provided to any third party. We only use your contact information to communicate annexation updates. You may unsubscribe from our communications at any time using the link in any email we send.
+            Your information will not be sold or provided to any third party. We only use your contact information to communicate annexation updates. To be removed from our list at any time, email{" "}
+            <a href="mailto:contact@onewonderlake.com" className="underline underline-offset-2">
+              contact@onewonderlake.com
+            </a>
+            .
           </p>
         </div>
         

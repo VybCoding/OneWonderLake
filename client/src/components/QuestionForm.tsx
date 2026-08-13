@@ -279,7 +279,7 @@ export default function QuestionForm({
 
               <div className="text-xs text-muted-foreground bg-muted/20 rounded p-3 space-y-1">
                 <p className="font-medium">Privacy Notice:</p>
-                <p>Your information will not be sold or provided to any third party. We will only use your contact information to respond to your question and share annexation updates. You may unsubscribe at any time.</p>
+                <p>Your information will not be sold or provided to any third party. We will only use your contact information to respond to your question and share annexation updates. To be removed from our list at any time, email contact@onewonderlake.com.</p>
               </div>
 
               <div className="flex gap-3 pt-2">
