@@ -97,7 +97,7 @@ Unite currently unincorporated neighborhoods—specifically "doughnut hole" isla
   - Rate limiting: 5 submissions per hour per IP
 
 #### Admin Dashboard (`/admin`)
-**Protected Access**: Replit Auth (Google, GitHub, email/password login)
+**Protected Access**: Sign in with Google, restricted to the `ADMIN_EMAILS` allowlist
 
 **Community Sentiment Dashboard - Key Metrics**:
 - **Interested Count**: Total residents interested in annexation
@@ -178,8 +178,9 @@ The production server automatically binds to `0.0.0.0` and uses the `PORT` envir
 ### Tech Stack
 - **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Shadcn/ui
 - **Backend**: Express.js, TypeScript
-- **Database**: PostgreSQL (Neon) with Drizzle ORM
-- **Authentication**: Replit Auth (OIDC) for admin access
+- **Database**: PostgreSQL with Drizzle ORM (provisioned via the Vercel Marketplace)
+- **Authentication**: Google OIDC for admin access, gated by an email allowlist
+- **Hosting**: Vercel — static frontend plus the Express API as a serverless function
 - **Mapping**: Leaflet 4.2.1 + react-leaflet with OpenStreetMap tiles
 - **Geocoding**: OpenStreetMap Nominatim API
 - **Geospatial Analysis**: Turf.js (point-in-polygon detection)
@@ -247,11 +248,10 @@ See `design_guidelines.md` for complete specifications.
 ### Phase 4: Legal & Outreach Tools
 - [ ] Pre-Annexation Agreement templates (downloadable)
 - [ ] Advanced "Visualizing the Wallet" comparisons per subdivision
-- [ ] Email campaign integration
 
 ## 💾 Database
 
-Uses PostgreSQL (Neon-backed) with Drizzle ORM for:
+Uses PostgreSQL with Drizzle ORM for:
 - **Interested Parties**: Resident interest/disinterest submissions
 - **Searched Addresses**: Address lookup analytics
 - **Community Questions**: User-submitted questions with admin responses
@@ -261,15 +261,71 @@ Uses PostgreSQL (Neon-backed) with Drizzle ORM for:
 ## 🔐 Security & Access Control
 
 ### Admin Access
-- **Authentication**: Replit Auth protects admin dashboard
-- **Authorization**: Admin access controlled via `isAdmin` database flag
-- **Current Admin Users**: ddycus@gmail.com, developerdeeks@gmail.com
+- **Authentication**: Google sign-in protects the admin dashboard
+- **Authorization**: The `ADMIN_EMAILS` environment variable is the single source of
+  truth. It is re-checked on every request and also sets the `isAdmin` database flag
+  on each login, so granting or revoking access never requires a database edit.
+- **Managing admins**: edit `ADMIN_EMAILS` in Vercel → Settings → Environment
+  Variables, then redeploy. Removing an address revokes access immediately.
 
 ### Data Security
 - **Rate Limiting**: 5 submissions per IP per hour
 - **Input Validation**: Strict length constraints on all form fields
 - **Duplicate Detection**: Prevents duplicate email submissions
 - **Z-index Management**: Ensures all dropdowns appear above dialogs
+
+## 🚀 Deployment & Operations
+
+The site is hosted on **Vercel**: the Vite frontend is served as static files and
+the Express API runs as a single serverless function (`api/index.ts`). Pushing to
+`main` deploys to production; every pull request gets a preview URL.
+
+### Accounts involved
+
+| Service | Used for |
+|---|---|
+| **Squarespace** | Domain registration and DNS for `onewonderlake.com` |
+| **Vercel** | Hosting, the Postgres database (Marketplace), environment variables |
+| **Google Workspace** | `contact@onewonderlake.com` mail, and the Google account that signs into `/admin` |
+
+The site sends no email of its own. `contact@onewonderlake.com` is a normal
+Workspace mailbox reached through a `mailto:` link.
+
+### Environment variables
+
+Set in Vercel → Settings → Environment Variables. See `.env.example` for the
+full annotated list.
+
+| Variable | Notes |
+|---|---|
+| `DATABASE_URL` | Injected automatically by the Vercel Postgres integration |
+| `SESSION_SECRET` | Any long random string; changing it logs admins out |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google Cloud OAuth client (Web application) |
+| `ADMIN_EMAILS` | Comma-separated allowlist of admin Google accounts |
+
+The Google OAuth client's authorized redirect URI must be
+`https://www.onewonderlake.com/api/callback`.
+
+### DNS
+
+DNS is managed in Squarespace. The `www` and apex records point at Vercel.
+
+> **Do not remove the MX records.** They route Google Workspace mail for
+> `contact@onewonderlake.com`. They are unrelated to website hosting.
+
+### Local development
+
+```bash
+npm install
+cp .env.example .env      # fill in the values
+npm run db:push           # create tables
+npm run dev               # http://localhost:5000
+```
+
+### Changing the database schema
+
+Edit `shared/schema.ts`, then run `npm run db:push`. There are no migration
+files; Drizzle diffs the schema against the live database.
 
 ## 👥 Contributing
 
@@ -297,10 +353,10 @@ For questions about the campaign or technical implementation, refer to the proje
 ### Dedicated Pages
 - **More Info** (`/more-info`): Comprehensive FAQ page with community questions
 - **Tax Estimator** (`/tax-estimator`): Full-page property tax calculation tool
-- **Admin Dashboard** (`/admin`): Protected admin panel (Replit Auth required)
+- **Admin Dashboard** (`/admin`): Protected admin panel (Google sign-in required)
 
 ---
 
-**Last Updated**: November 26, 2025  
-**Status**: ✅ Production Ready - All Features Functional  
-**Current Version**: v1.1.134 (Interactive Fund Revenue Calculator, LGDF/MFT Details, Census Timing)
+**Last Updated**: August 13, 2026  
+**Status**: Migrated off Replit — deploys to Vercel  
+**Current Version**: v1.3.0

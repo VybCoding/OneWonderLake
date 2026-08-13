@@ -1,21 +1,34 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
+import pg from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "../shared/schema";
 
-console.log("[DB] Initializing database connection...");
-
-neonConfig.webSocketConstructor = ws;
+const { Pool } = pg;
 
 if (!process.env.DATABASE_URL) {
   console.error("[DB] FATAL: DATABASE_URL environment variable is not set");
-  console.error("[DB] Please ensure DATABASE_URL is configured in your deployment environment");
+  console.error("[DB] Set it in Vercel → Settings → Environment Variables");
   throw new Error(
     "DATABASE_URL must be set. Did you forget to provision a database?",
   );
 }
 
-console.log("[DB] DATABASE_URL is configured, creating connection pool...");
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle({ client: pool, schema });
-console.log("[DB] Database connection initialized successfully");
+// A standard TCP connection, which works identically against a local Postgres
+// and against the hosted pooled endpoint. The session store (connect-pg-simple)
+// already connects this way, so there is one driver rather than two.
+// Keep the pool small: serverless instances are many and short-lived, and the
+// pooled endpoint multiplexes on the server side.
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 3,
+  idleTimeoutMillis: 10_000,
+  connectionTimeoutMillis: 10_000,
+  ssl: /\bsslmode=(require|verify-full|verify-ca)\b/.test(process.env.DATABASE_URL)
+    ? { rejectUnauthorized: false }
+    : undefined,
+});
+
+pool.on("error", (err) => {
+  console.error("[DB] Idle client error:", err.message);
+});
+
+export const db = drizzle(pool, { schema });

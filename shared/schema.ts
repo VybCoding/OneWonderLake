@@ -44,18 +44,12 @@ export const interestedParties = pgTable("interested_parties", {
   interested: boolean("interested").notNull().default(true), // true = interested in annexation, false = not interested
   latitude: varchar("latitude"), // Geocoded latitude for map display
   longitude: varchar("longitude"), // Geocoded longitude for map display
-  emailSent: boolean("email_sent").default(false),
   contactConsent: boolean("contact_consent").notNull().default(false), // User consented to be contacted
-  unsubscribed: boolean("unsubscribed").default(false), // User has unsubscribed from communications
-  unsubscribeToken: varchar("unsubscribe_token"), // Secure token for unsubscribe link
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertInterestedPartySchema = createInsertSchema(interestedParties).omit({
   id: true,
-  emailSent: true,
-  unsubscribed: true,
-  unsubscribeToken: true,
   createdAt: true,
 }).extend({
   name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
@@ -63,9 +57,9 @@ export const insertInterestedPartySchema = createInsertSchema(interestedParties)
   address: z.string().min(5, "Please enter your full address").max(500, "Address is too long"),
   phone: z.string().max(20, "Phone number is too long").optional().or(z.literal("")),
   notes: z.string().max(1000, "Notes are too long").optional().or(z.literal("")),
-  source: z.enum(["address_checker", "tax_estimator"], { 
+  source: z.enum(["address_checker", "tax_estimator"], {
     required_error: "Source is required",
-    invalid_type_error: "Invalid source" 
+    invalid_type_error: "Invalid source"
   }),
   interested: z.boolean().default(true),
   latitude: z.string().optional().or(z.literal("")),
@@ -117,8 +111,6 @@ export const communityQuestions = pgTable("community_questions", {
   status: varchar("status").notNull().default("pending"),
   answer: text("answer"),
   contactConsent: boolean("contact_consent").notNull().default(false), // User consented to be contacted
-  unsubscribed: boolean("unsubscribed").default(false), // User has unsubscribed from communications
-  unsubscribeToken: varchar("unsubscribe_token"), // Secure token for unsubscribe link
   createdAt: timestamp("created_at").defaultNow(),
   answeredAt: timestamp("answered_at"),
 });
@@ -127,8 +119,6 @@ export const insertCommunityQuestionSchema = createInsertSchema(communityQuestio
   id: true,
   status: true,
   answer: true,
-  unsubscribed: true,
-  unsubscribeToken: true,
   createdAt: true,
   answeredAt: true,
 }).extend({
@@ -172,126 +162,6 @@ export const insertDynamicFaqSchema = createInsertSchema(dynamicFaqs).omit({
 
 export type InsertDynamicFaq = z.infer<typeof insertDynamicFaqSchema>;
 export type DynamicFaq = typeof dynamicFaqs.$inferSelect;
-
-// Email correspondence - track all emails sent from admin
-export const emailCorrespondence = pgTable("email_correspondence", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  recipientEmail: varchar("recipient_email").notNull(),
-  recipientName: varchar("recipient_name"),
-  subject: varchar("subject").notNull(),
-  htmlBody: text("html_body").notNull(),
-  textBody: text("text_body"),
-  relatedType: varchar("related_type"), // 'interested_party', 'community_question', or null for general
-  relatedId: varchar("related_id"), // ID of the related record
-  sentBy: varchar("sent_by"), // Admin user ID who sent
-  resendId: varchar("resend_id"), // Resend's email ID for tracking
-  status: varchar("status").notNull().default("sent"), // 'sent', 'delivered', 'failed'
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const insertEmailCorrespondenceSchema = createInsertSchema(emailCorrespondence).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type InsertEmailCorrespondence = z.infer<typeof insertEmailCorrespondenceSchema>;
-export type EmailCorrespondence = typeof emailCorrespondence.$inferSelect;
-
-// Inbound emails - emails received via Resend webhook
-export const inboundEmails = pgTable("inbound_emails", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  resendEmailId: varchar("resend_email_id").notNull().unique(), // Resend's email_id from webhook
-  fromEmail: varchar("from_email").notNull(),
-  fromName: varchar("from_name"),
-  toEmail: varchar("to_email").notNull(), // Should be contact@onewonderlake.com
-  subject: varchar("subject").notNull(),
-  textBody: text("text_body"),
-  htmlBody: text("html_body"),
-  messageId: varchar("message_id"), // Original message ID header
-  inReplyTo: varchar("in_reply_to"), // For threading
-  isRead: boolean("is_read").default(false),
-  isReplied: boolean("is_replied").default(false),
-  replyEmailId: varchar("reply_email_id"), // ID of our reply email_correspondence record
-  attachments: jsonb("attachments"), // Array of attachment metadata
-  rawPayload: jsonb("raw_payload"), // Raw webhook payload for debugging
-  receivedAt: timestamp("received_at").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const insertInboundEmailSchema = createInsertSchema(inboundEmails).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type InsertInboundEmail = z.infer<typeof insertInboundEmailSchema>;
-export type InboundEmail = typeof inboundEmails.$inferSelect;
-
-// Email usage tracking - monthly email counters for free tier management
-export const emailUsage = pgTable("email_usage", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  month: varchar("month").notNull().unique(), // Format: YYYY-MM
-  sentCount: integer("sent_count").default(0),
-  receivedCount: integer("received_count").default(0),
-  isShutoff: boolean("is_shutoff").default(false), // Auto-shutoff when reaching 2500
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const insertEmailUsageSchema = createInsertSchema(emailUsage).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export type InsertEmailUsage = z.infer<typeof insertEmailUsageSchema>;
-export type EmailUsage = typeof emailUsage.$inferSelect;
-
-// Contact sources enum
-export const contactSources = ["interested_party", "community_question", "inbound_email", "tax_estimator", "manual"] as const;
-export type ContactSource = typeof contactSources[number];
-
-// Interest status enum
-export const interestStatuses = ["interested", "not_interested", "unknown"] as const;
-export type InterestStatus = typeof interestStatuses[number];
-
-// Contacts - unified contact list from all sources
-export const contacts = pgTable("contacts", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: varchar("name").notNull(),
-  email: varchar("email").notNull(),
-  phone: varchar("phone"),
-  address: varchar("address"),
-  source: varchar("source").notNull().default("manual"), // Source of the contact
-  relatedEntityId: varchar("related_entity_id"), // ID of the original record (interested_party, question, etc.)
-  interestStatus: varchar("interest_status").notNull().default("unknown"), // interested, not_interested, unknown
-  contactConsent: boolean("contact_consent").default(false),
-  marketingOptOut: boolean("marketing_opt_out").default(false), // User opted out of marketing/promotions
-  unsubscribed: boolean("unsubscribed").default(false),
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const insertContactSchema = createInsertSchema(contacts).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
-  email: z.string().email("Please enter a valid email address").max(255, "Email is too long"),
-  phone: z.string().max(20, "Phone number is too long").optional().or(z.literal("")),
-  address: z.string().max(500, "Address is too long").optional().or(z.literal("")),
-  source: z.enum(contactSources).default("manual"),
-  interestStatus: z.enum(interestStatuses).default("unknown"),
-  contactConsent: z.boolean().default(false),
-  marketingOptOut: z.boolean().default(false),
-  unsubscribed: z.boolean().default(false),
-  notes: z.string().max(1000, "Notes are too long").optional().or(z.literal("")),
-  relatedEntityId: z.string().optional(),
-});
-
-export type InsertContact = z.infer<typeof insertContactSchema>;
-export type Contact = typeof contacts.$inferSelect;
 
 // Build info type for version tracking
 export interface BuildInfo {
