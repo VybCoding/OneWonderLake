@@ -4,7 +4,8 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Session storage table.
-// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+// (IMPORTANT) Backs express-session via connect-pg-simple. Dropping it logs
+// every admin out and breaks sign-in until it is recreated.
 export const sessions = pgTable(
   "sessions",
   {
@@ -15,8 +16,8 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table.
-// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+// User storage table. Rows are created on first Google sign-in; `isAdmin` is
+// derived from the ADMIN_EMAILS allowlist on every login.
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),

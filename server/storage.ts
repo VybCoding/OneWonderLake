@@ -26,7 +26,7 @@ import {
   type InsertEmailUsage,
   type Contact,
   type InsertContact,
-} from "@shared/schema";
+} from "../shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and } from "drizzle-orm";
 

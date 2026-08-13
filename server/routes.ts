@@ -1,14 +1,12 @@
 import type { Express, Request, Response } from "express";
-import { createServer, type Server } from "http";
-import { existsSync, readFileSync, writeFileSync } from "fs";
-import { execSync } from "child_process";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { randomBytes } from "crypto";
 import { Webhook } from "svix";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./googleAuth";
 import { sendEmail, getEmailContent, getEmailLimits } from "./resend";
-import { insertInterestedPartySchema, insertSearchedAddressSchema, insertCommunityQuestionSchema, insertDynamicFaqSchema, type BuildInfo } from "@shared/schema";
+import { insertInterestedPartySchema, insertSearchedAddressSchema, insertCommunityQuestionSchema, insertDynamicFaqSchema, type BuildInfo } from "../shared/schema";
 
 function getCurrentMonth(): string {
   const now = new Date();
@@ -38,40 +36,14 @@ function loadBuildInfo(): BuildInfo {
     }
   }
   
+  // No build-info.json on disk: fall back to the deployment metadata Vercel
+  // injects. The filesystem is read-only at runtime, so nothing is written here.
   const now = new Date();
-  let gitCommit = "unknown";
-  let commitCount = 0;
-  
-  try {
-    gitCommit = execSync("git rev-parse --short HEAD").toString().trim();
-    commitCount = parseInt(execSync("git rev-list --count HEAD").toString().trim(), 10);
-    console.log("[BUILD-INFO] Generated from git:", { version: `1.1.${commitCount}`, gitCommit });
-    
-    const buildInfo: BuildInfo = {
-      version: `1.1.${commitCount}`,
-      buildDate: now.toISOString().split("T")[0],
-      buildTime: now.toISOString(),
-      gitCommit,
-    };
-    
-    const writePath = join(process.cwd(), "build-info.json");
-    try {
-      writeFileSync(writePath, JSON.stringify(buildInfo, null, 2));
-      console.log("[BUILD-INFO] Written to:", writePath);
-    } catch (writeError) {
-      console.warn("[BUILD-INFO] Could not write file:", writeError);
-    }
-    
-    return buildInfo;
-  } catch {
-    console.log("[BUILD-INFO] Git not available, using fallback");
-  }
-  
   return {
-    version: "1.1.dev",
+    version: process.env.VERCEL_GIT_COMMIT_SHA ? "1.3.0" : "1.3.dev",
     buildDate: now.toISOString().split("T")[0],
     buildTime: now.toISOString(),
-    gitCommit: "unknown",
+    gitCommit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "unknown",
   };
 }
 
@@ -274,8 +246,8 @@ function calculatePostAnnexationTax(eav: number, currentTax: number): TaxEstimat
   };
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup Replit Auth
+export async function registerRoutes(app: Express): Promise<void> {
+  // Google sign-in, restricted to the ADMIN_EMAILS allowlist
   await setupAuth(app);
 
   // Auth routes
@@ -1379,11 +1351,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("[RESEND WEBHOOK] Received event:", event.type);
       
-      // Log the FULL raw payload for debugging - write to file for persistence
-      const fs = await import('fs');
-      const logPath = '/tmp/resend_webhook_debug.json';
-      fs.writeFileSync(logPath, JSON.stringify(event, null, 2));
-      console.log("[RESEND WEBHOOK] FULL RAW PAYLOAD written to:", logPath);
       console.log("[RESEND WEBHOOK] FULL RAW PAYLOAD:", JSON.stringify(event, null, 2));
       
       // Handle email.received event
@@ -1520,6 +1487,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
 }

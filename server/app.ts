@@ -1,4 +1,4 @@
-import { type Server } from "node:http";
+import { createServer, type Server } from "node:http";
 
 import express, {
   type Express,
@@ -64,33 +64,52 @@ app.use((req, res, next) => {
   next();
 });
 
+let appPromise: Promise<Express> | null = null;
+
+/**
+ * Builds the fully configured Express app without binding a port, so the same
+ * app can be served by a long-lived Node process (dev) or a serverless
+ * function (production on Vercel). Memoized: a warm function instance reuses
+ * the already-registered routes.
+ */
+export function createApp(): Promise<Express> {
+  if (!appPromise) {
+    appPromise = (async () => {
+      await registerRoutes(app);
+
+      app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+        const status = err.status || err.statusCode || 500;
+        const message = err.message || "Internal Server Error";
+
+        console.error("[ERROR]", status, message, err?.stack ?? "");
+        if (!res.headersSent) {
+          res.status(status).json({ message });
+        }
+      });
+
+      return app;
+    })();
+  }
+  return appPromise;
+}
+
+/**
+ * Long-lived server entry point (local dev and any non-serverless host).
+ * `setup` installs the front-end layer — Vite middleware in dev, static files
+ * in a standalone production build — after the API routes are registered.
+ */
 export default async function runApp(
   setup: (app: Express, server: Server) => Promise<void>,
 ) {
-  const server = await registerRoutes(app);
-
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
-  });
+  const configuredApp = await createApp();
+  const server = createServer(configuredApp);
 
   // importantly run the final setup after setting up all the other routes so
   // the catch-all route doesn't interfere with the other routes
-  await setup(app, server);
+  await setup(configuredApp, server);
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  server.listen({ port, host: "0.0.0.0" }, () => {
     log(`serving on port ${port}`);
   });
 }
